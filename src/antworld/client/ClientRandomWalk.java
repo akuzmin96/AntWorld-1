@@ -336,6 +336,8 @@ public class ClientRandomWalk
     if (goToGoodAnt(ant, action)) return action;
 
     if (goExplore(ant, action)) return action;
+    
+    if (healUnderground(ant, action)) return action;
 
     return action;
   }
