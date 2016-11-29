@@ -5,28 +5,23 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Random;
 
-import antworld.common.AntAction;
-import antworld.common.AntData;
-import antworld.common.CommData;
-import antworld.common.Constants;
-import antworld.common.Direction;
-import antworld.common.NestNameEnum;
-import antworld.common.TeamNameEnum;
+import antworld.common.*;
 import antworld.common.AntAction.AntActionType;
 
 public class ClientRandomWalk
 {
   private static final boolean DEBUG = true;
-  private final TeamNameEnum myTeam;
+  private static final TeamNameEnum myTeam = TeamNameEnum.Josh_Anton;
   private static final long password = 962740848319L;//Each team has been assigned a random password.
   private ObjectInputStream inputStream = null;
   private ObjectOutputStream outputStream = null;
   private boolean isConnected = false;
   private NestNameEnum myNestName = null;
   private int centerX, centerY;
- 
+  private ArrayList<String> hostileList = new ArrayList<>();
 
   private Socket clientSocket;
 
@@ -37,14 +32,15 @@ public class ClientRandomWalk
   private static Random random = Constants.random;
 
 
-  public ClientRandomWalk(String host, int portNumber, TeamNameEnum team)
+  public ClientRandomWalk(String host, int portNumber)
   {
-    myTeam = team;
-    System.out.println("Starting " + team +" on " + host + ":" + portNumber + " at "
-      + System.currentTimeMillis());
-
-    isConnected = openConnection(host, portNumber);
-    if (!isConnected) System.exit(0);
+    System.out.println("Starting ClientRandomWalk: " + System.currentTimeMillis());
+    isConnected = false;
+    while (!isConnected)
+    {
+      isConnected = openConnection(host, portNumber);
+      if (!isConnected) try { Thread.sleep(2500); } catch (InterruptedException e1) {}
+    }
     CommData data = obtainNest();
     mainGameLoop(data);
     closeAll();
@@ -256,7 +252,22 @@ public class ClientRandomWalk
     }
     return false;
   }
-
+  
+  //Heal if ant is underground and needs healing
+  private boolean healUnderground(AntData ant, AntAction action)
+  {
+    if(ant.underground && ant.health < ant.antType.getMaxHealth())
+    {
+      action.type = AntActionType.HEAL;
+      return true;
+    }
+    return false;
+  }
+  
+  private void addToHostileList(AntData ant)
+  {
+    
+  }
 
   private boolean attackAdjacent(AntData ant, AntAction action)
   {
@@ -329,25 +340,12 @@ public class ClientRandomWalk
     return action;
   }
 
-
-  /**
-   * The last argument is taken as the host name.
-   * The default host is localhost.
-   * Also supports an optional option for the teamname.
-   * The default teamname is TeamNameEnum.RANDOM_WALKERS.
-   * @param args Array of command-line arguments.
-   */
   public static void main(String[] args)
   {
     String serverHost = "localhost";
-    if (args.length > 0) serverHost = args[args.length -1];
+    if (args.length > 0) serverHost = args[0];
+    System.out.println("Starting client with connection to: " + serverHost);
 
-    TeamNameEnum team = TeamNameEnum.RANDOM_WALKERS;
-    if (args.length > 1)
-    { team = TeamNameEnum.getTeamByString(args[0]);
-    }
-
-    new ClientRandomWalk(serverHost, Constants.PORT, team);
+    new ClientRandomWalk(serverHost, Constants.PORT);
   }
-
 }
