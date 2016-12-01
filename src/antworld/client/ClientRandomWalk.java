@@ -6,6 +6,7 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Random;
 
 import antworld.common.*;
@@ -13,7 +14,7 @@ import antworld.common.AntAction.AntActionType;
 
 public class ClientRandomWalk
 {
-  private static final boolean DEBUG = true;
+  private static final boolean DEBUG = false;
   private static final TeamNameEnum myTeam = TeamNameEnum.Josh_Anton;
   private static final long password = 962740848319L;//Each team has been assigned a random password.
   private ObjectInputStream inputStream = null;
@@ -21,10 +22,14 @@ public class ClientRandomWalk
   private boolean isConnected = false;
   private NestNameEnum myNestName = null;
   private int centerX, centerY;
-  private ArrayList<String> hostileList = new ArrayList<>();
-
+  
+  private int totalAnts;
+  private HashSet<AntData> enemyAntSet;
+  private HashSet<FoodData> foodSet;
+  private World world = new World();
+  private Pixel[][] map = world.getWorld();
+  
   private Socket clientSocket;
-
 
   //A random number generator is created in Constants. Use it.
   //Do not create a new generator every time you want a random number nor
@@ -226,6 +231,9 @@ public class ClientRandomWalk
 
   private void chooseActionsOfAllAnts(CommData commData)
   {
+    totalAnts = commData.myAntList.size();
+    enemyAntSet = commData.enemyAntSet;
+    foodSet = commData.foodSet;
     for (AntData ant : commData.myAntList)
     {
       AntAction action = chooseAction(commData, ant);
@@ -263,11 +271,6 @@ public class ClientRandomWalk
     }
     return false;
   }
-  
-  private void addToHostileList(AntData ant)
-  {
-    
-  }
 
   private boolean attackAdjacent(AntData ant, AntAction action)
   {
@@ -286,6 +289,11 @@ public class ClientRandomWalk
 
   private boolean pickUpWater(AntData ant, AntAction action)
   {
+    if (ant.carryUnits > 0)
+    {
+      if (ant.carryUnits >= ant.antType.getCarryCapacity()) return false;
+      if (ant.carryType != FoodType.WATER) return false;
+    }
     return false;
   }
 
@@ -304,9 +312,23 @@ public class ClientRandomWalk
     return false;
   }
 
+  private int temp;
+  
   private boolean goExplore(AntData ant, AntAction action)
   {
-    Direction dir = Direction.getRandomDir();
+    //Direction dir = Direction.getRandomDir();
+    //action.type = AntActionType.MOVE;
+    //action.direction = dir;
+    if (temp == totalAnts)
+    {
+      temp = 0;
+    }
+    
+    Direction dir = Direction.NORTH;
+    
+    if(temp > totalAnts / 2) dir = Direction.SOUTH;
+    temp++;
+    
     action.type = AntActionType.MOVE;
     action.direction = dir;
     return true;
@@ -318,6 +340,8 @@ public class ClientRandomWalk
     AntAction action = new AntAction(AntActionType.STASIS);
     
     if (ant.ticksUntilNextAction > 0) return action;
+    
+    if (healUnderground(ant, action)) return action;
 
     if (exitNest(ant, action)) return action;
 
@@ -336,8 +360,6 @@ public class ClientRandomWalk
     if (goToGoodAnt(ant, action)) return action;
 
     if (goExplore(ant, action)) return action;
-    
-    if (healUnderground(ant, action)) return action;
 
     return action;
   }
