@@ -28,6 +28,19 @@ public class ClientRandomWalk
   private HashSet<FoodData> foodSet;
   private World world = new World();
   private Pixel[][] map = world.getWorld();
+  private static final int DIR_BIT_N  = 1;
+  private static final int DIR_BIT_NE = 2;
+  private static final int DIR_BIT_E  = 4;
+  private static final int DIR_BIT_SE = 8;
+  private static final int DIR_BIT_S  = 16;
+  private static final int DIR_BIT_SW = 32;
+  private static final int DIR_BIT_W  = 64;
+  private static final int DIR_BIT_NW = 128;
+  
+  private static final int DIR_BIT_ANY_N = DIR_BIT_N | DIR_BIT_NE | DIR_BIT_NW;
+  private static final int DIR_BIT_ANY_S = DIR_BIT_S | DIR_BIT_SE | DIR_BIT_SW;
+  private static final int DIR_BIT_ANY_E = DIR_BIT_E | DIR_BIT_NE | DIR_BIT_SE;
+  private static final int DIR_BIT_ANY_W = DIR_BIT_W | DIR_BIT_NW | DIR_BIT_SW;
   
   private Socket clientSocket;
 
@@ -311,26 +324,111 @@ public class ClientRandomWalk
   {
     return false;
   }
-
-  private int temp;
   
   private boolean goExplore(AntData ant, AntAction action)
   {
     //Direction dir = Direction.getRandomDir();
     //action.type = AntActionType.MOVE;
     //action.direction = dir;
-    if (temp == totalAnts)
+    int goalX = 0;
+    int goalY = 0;
+    if (ant.gridX > centerX) goalX = 1000000;
+    if (ant.gridY > centerY) goalY = 1000000;
+  
+    int dirBits = getDirectionBitsOpen(ant);
+    dirBits = getDirBitsToLocation(dirBits, ant.gridX, ant.gridY, goalX, goalY);
+  
+    if (ant.myAction.type == AntActionType.MOVE)
     {
-      temp = 0;
+      int dx = ant.myAction.direction.deltaY();
+      int dy = ant.myAction.direction.deltaY();
+      int lastGoalX = goalX;
+      int lastGoalY = goalY;
+      if (dx != 0) lastGoalX = ant.gridX + dx;
+      if (dy != 0) lastGoalY = ant.gridY + dy;
+    
+      dirBits = getDirBitsToLocation(dirBits, ant.gridX, ant.gridY, lastGoalX, lastGoalY);
     }
     
-    Direction dir = Direction.NORTH;
+    if (dirBits == 0) return false;
     
-    if(temp > totalAnts / 2) dir = Direction.SOUTH;
-    temp++;
+    return goToward(ant, goalX, goalY);
+  }
+  
+  public boolean goToward(AntData ant, int x, int y)
+  {
+    int dirBits = getDirectionBitsOpen(ant);
     
-    action.type = AntActionType.MOVE;
-    action.direction = dir;
+    dirBits = getDirBitsToLocation(dirBits, ant.gridX, ant.gridY, x, y);
+    
+    Direction dir = getRandomDirection(dirBits);
+    
+    if (dir == null) return false;
+    ant.myAction.type = AntActionType.MOVE;
+    ant.myAction.direction = dir;
+    return true;
+  }
+  
+  public static Direction getRandomDirection(int dirBits)
+  {
+    Direction dir = Direction.getRandomDir();
+    for (int i = 0; i<Direction.SIZE; i++)
+    {
+      int bit = 1 << dir.ordinal();
+      if ((bit & dirBits) != 0) return dir;
+      
+      dir = Direction.getRightDir(dir);
+    }
+    return null;
+  }
+  
+  private int getDirectionBitsOpen(AntData ant)
+  {
+    if (DEBUG) System.out.println("  getDirectionBitsOpen()");
+    int dirBits = 255;
+    for (Direction dir : Direction.values())
+    {
+      int x = ant.gridX + dir.deltaX();
+      int y = ant.gridY + dir.deltaY();
+      int bit = 1 << dir.ordinal();
+      
+      Pixel neighborCell = map[x][y];
+      
+      if (neighborCell == null) dirBits = dirBits & bit;
+      
+      else if (neighborCell.getType() == 'W') dirBits -= bit;
+      
+      //Add our nest to the list of excluded
+      else if (neighborCell.getType() != 'G')  dirBits -= bit;
+    }
+    
+    return dirBits;
+  }
+  
+  public static int getDirBitsToLocation(int dirBits, int x, int y, int xx, int yy)
+  {
+    
+    //System.out.println("  getDirBitsToLocation("+dirBits+", " + x +", " + y + ", " + xx+ ", " + yy + ")");
+    //System.out.println("0 " + dirBits  +" & DIR_BIT_ANY_E=" + DIR_BIT_ANY_E);
+    if (xx <= x) dirBits = dirBits & (~DIR_BIT_ANY_E);
+    
+    //System.out.println("1 " + dirBits);
+    if (xx >= x) dirBits = dirBits & (~DIR_BIT_ANY_W);
+    
+    //System.out.println("2 " + dirBits);
+    if (yy <= y) dirBits = dirBits & (~DIR_BIT_ANY_S);
+    if (yy >= y) dirBits = dirBits & (~DIR_BIT_ANY_N);
+    
+    return dirBits;
+  }
+  
+  public boolean goRandom(AntData ant, AntAction action)
+  {
+    int dirBits = getDirectionBitsOpen(ant);
+    Direction dir = getRandomDirection(dirBits);
+    if (dir == null) return false;
+    ant.myAction.type = AntActionType.MOVE;
+    ant.myAction.direction = dir;
     return true;
   }
 
@@ -360,6 +458,8 @@ public class ClientRandomWalk
     if (goToGoodAnt(ant, action)) return action;
 
     if (goExplore(ant, action)) return action;
+    
+    if (goRandom(ant, action)) return action;
 
     return action;
   }
