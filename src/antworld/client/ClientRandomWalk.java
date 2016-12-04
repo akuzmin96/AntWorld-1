@@ -22,10 +22,7 @@ public class ClientRandomWalk
   private boolean isConnected = false;
   private NestNameEnum myNestName = null;
   private int centerX, centerY;
-  
-  private int totalAnts;
-  private HashSet<AntData> enemyAntSet;
-  private HashSet<FoodData> foodSet;
+
   private World world = new World();
   private Pixel[][] map = world.getWorld();
   private static final int DIR_BIT_N  = 1;
@@ -244,9 +241,6 @@ public class ClientRandomWalk
 
   private void chooseActionsOfAllAnts(CommData commData)
   {
-    totalAnts = commData.myAntList.size();
-    enemyAntSet = commData.enemyAntSet;
-    foodSet = commData.foodSet;
     for (AntData ant : commData.myAntList)
     {
       AntAction action = chooseAction(commData, ant);
@@ -264,26 +258,34 @@ public class ClientRandomWalk
   //=============================================================================
   private boolean exitNest(AntData ant, AntAction action)
   {
-    if (ant.underground)
+    if (ant.underground == false) return false;
+
+    if (ant.health < ant.antType.getMaxHealth())
     {
+      ant.myAction.type = AntActionType.HEAL;
+      return true;
+    }
+
+    //if (ant.underground)
+    //{
       action.type = AntActionType.EXIT_NEST;
       action.x = centerX - (Constants.NEST_RADIUS-1) + random.nextInt(2 * (Constants.NEST_RADIUS-1));
       action.y = centerY - (Constants.NEST_RADIUS-1) + random.nextInt(2 * (Constants.NEST_RADIUS-1));
       return true;
-    }
-    return false;
+    //}
+    //return false;
   }
   
   //Heal if ant is underground and needs healing
-  private boolean healUnderground(AntData ant, AntAction action)
-  {
-    if(ant.underground && ant.health < ant.antType.getMaxHealth())
-    {
-      action.type = AntActionType.HEAL;
-      return true;
-    }
-    return false;
-  }
+  //private boolean healUnderground(AntData ant, AntAction action)
+  //{
+  //  if(ant.underground && ant.health < ant.antType.getMaxHealth())
+  //  {
+  //    action.type = AntActionType.HEAL;
+  //    return true;
+  //  }
+  //  return false;
+  //}
 
   private boolean attackAdjacent(AntData ant, AntAction action)
   {
@@ -327,9 +329,6 @@ public class ClientRandomWalk
   
   private boolean goExplore(AntData ant, AntAction action)
   {
-    //Direction dir = Direction.getRandomDir();
-    //action.type = AntActionType.MOVE;
-    //action.direction = dir;
     int goalX = 0;
     int goalY = 0;
     if (ant.gridX > centerX) goalX = 1000000;
@@ -397,7 +396,7 @@ public class ClientRandomWalk
       if (neighborCell == null) dirBits = dirBits & bit;
       
       else if (neighborCell.getType() == 'W') dirBits -= bit;
-      
+
       //Add our nest to the list of excluded
       else if (neighborCell.getType() != 'G')  dirBits -= bit;
     }
@@ -438,26 +437,26 @@ public class ClientRandomWalk
     AntAction action = new AntAction(AntActionType.STASIS);
     
     if (ant.ticksUntilNextAction > 0) return action;
-    
-    if (healUnderground(ant, action)) return action;
+
+    //if (healUnderground(ant, action)) return action;
 
     if (exitNest(ant, action)) return action;
 
-    if (attackAdjacent(ant, action)) return action;
+    //if (attackAdjacent(ant, action)) return action;
 
-    if (pickUpFoodAdjacent(ant, action)) return action;
+    //if (pickUpFoodAdjacent(ant, action)) return action;
 
-    if (goHomeIfCarryingOrHurt(ant, action)) return action;
+    //if (goHomeIfCarryingOrHurt(ant, action)) return action;
 
-    if (pickUpWater(ant, action)) return action;
+    //if (pickUpWater(ant, action)) return action;
 
-    if (goToEnemyAnt(ant, action)) return action;
+    //if (goToEnemyAnt(ant, action)) return action;
 
-    if (goToFood(ant, action)) return action;
+    //if (goToFood(ant, action)) return action;
 
-    if (goToGoodAnt(ant, action)) return action;
+    //if (goToGoodAnt(ant, action)) return action;
 
-    if (goExplore(ant, action)) return action;
+    //if (goExplore(ant, action)) return action;
     
     if (goRandom(ant, action)) return action;
 
