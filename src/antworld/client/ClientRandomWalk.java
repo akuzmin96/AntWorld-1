@@ -304,10 +304,29 @@ public class ClientRandomWalk
 
   private boolean pickUpWater(AntData ant, AntAction action)
   {
+    if (DEBUG) System.out.println("  pickUpWater()");
+    
     if (ant.carryUnits > 0)
     {
       if (ant.carryUnits >= ant.antType.getCarryCapacity()) return false;
       if (ant.carryType != FoodType.WATER) return false;
+    }
+    
+    for (Direction dir : Direction.values())
+    {
+      int x = ant.gridX + dir.deltaX();
+      int y = ant.gridY + dir.deltaY();
+      Pixel neighborCell = map[x][y];
+    
+      if (neighborCell == null) continue;
+    
+      if (neighborCell.getType() == 'W')
+      {
+        action.type = AntActionType.PICKUP;
+        action.direction = dir;
+        action.quantity = ant.antType.getCarryCapacity();
+        return true;
+      }
     }
     return false;
   }
@@ -337,10 +356,10 @@ public class ClientRandomWalk
     int dirBits = getDirectionBitsOpen(ant);
     dirBits = getDirBitsToLocation(dirBits, ant.gridX, ant.gridY, goalX, goalY);
   
-    if (ant.myAction.type == AntActionType.MOVE)
+    if (action.type == AntActionType.MOVE)
     {
-      int dx = ant.myAction.direction.deltaY();
-      int dy = ant.myAction.direction.deltaY();
+      int dx = action.direction.deltaY();
+      int dy = action.direction.deltaY();
       int lastGoalX = goalX;
       int lastGoalY = goalY;
       if (dx != 0) lastGoalX = ant.gridX + dx;
@@ -351,10 +370,10 @@ public class ClientRandomWalk
     
     if (dirBits == 0) return false;
     
-    return goToward(ant, goalX, goalY);
+    return goToward(ant, goalX, goalY, action);
   }
   
-  public boolean goToward(AntData ant, int x, int y)
+  public boolean goToward(AntData ant, int x, int y, AntAction action)
   {
     int dirBits = getDirectionBitsOpen(ant);
     
@@ -363,15 +382,15 @@ public class ClientRandomWalk
     Direction dir = getRandomDirection(dirBits);
     
     if (dir == null) return false;
-    ant.myAction.type = AntActionType.MOVE;
-    ant.myAction.direction = dir;
+    action.type = AntActionType.MOVE;
+    action.direction = dir;
     return true;
   }
   
   public static Direction getRandomDirection(int dirBits)
   {
     Direction dir = Direction.getRandomDir();
-    for (int i = 0; i<Direction.SIZE; i++)
+    for (int i = 0; i < Direction.SIZE; i++)
     {
       int bit = 1 << dir.ordinal();
       if ((bit & dirBits) != 0) return dir;
@@ -396,9 +415,8 @@ public class ClientRandomWalk
       if (neighborCell == null) dirBits = dirBits & bit;
       
       else if (neighborCell.getType() == 'W') dirBits -= bit;
-
-      //Add our nest to the list of excluded
-      else if (neighborCell.getType() != 'G')  dirBits -= bit;
+      
+      else if (neighborCell.getType() != 'G' && ant.gridX > centerX + 10 && ant.gridX < centerX - 10 && ant.gridY > centerY + 10 && ant.gridY < centerY - 10)  dirBits -= bit;
     }
     
     return dirBits;
@@ -426,8 +444,8 @@ public class ClientRandomWalk
     int dirBits = getDirectionBitsOpen(ant);
     Direction dir = getRandomDirection(dirBits);
     if (dir == null) return false;
-    ant.myAction.type = AntActionType.MOVE;
-    ant.myAction.direction = dir;
+    action.type = AntActionType.MOVE;
+    action.direction = dir;
     return true;
   }
 
@@ -447,8 +465,8 @@ public class ClientRandomWalk
     //if (pickUpFoodAdjacent(ant, action)) return action;
 
     //if (goHomeIfCarryingOrHurt(ant, action)) return action;
-
-    //if (pickUpWater(ant, action)) return action;
+    
+    if (pickUpWater(ant, action)) return action;
 
     //if (goToEnemyAnt(ant, action)) return action;
 
@@ -456,7 +474,7 @@ public class ClientRandomWalk
 
     //if (goToGoodAnt(ant, action)) return action;
 
-    //if (goExplore(ant, action)) return action;
+    if (goExplore(ant, action)) return action;
     
     if (goRandom(ant, action)) return action;
 
