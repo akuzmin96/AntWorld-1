@@ -270,8 +270,6 @@ public class ClientRandomWalk
     if (DEBUG) System.out.println("  pickUpFoodAdjactent()");
     if (ant.carryUnits > 0) return false;
     
-    System.out.println("Food:" + food.gridX + " " + food.gridY);
-    
     for (Direction dir : Direction.values())
     {
       int x = ant.gridX + dir.deltaX();
@@ -281,26 +279,24 @@ public class ClientRandomWalk
       if (neighborCell == null) continue;
       
       if (neighborCell.getType() == 'W') continue;
-
-      System.out.println("Cell:" + neighborCell.getX() + " " + neighborCell.getY());
       
       if(neighborCell.getX() == food.gridX && neighborCell.getY() == food.gridY)
       {
-        System.out.println("Neighbor cell found food");
         action.type = AntActionType.PICKUP;
         action.direction = dir;
         if(food.getCount() < ant.antType.getCarryCapacity())
         {
           System.out.println("Picked up small food");
           action.quantity = food.getCount();
+          return true;
         }
         else
         {
           System.out.println("Picked up everything");
           action.quantity = ant.antType.getCarryCapacity();
+          return true;
         }
       }
-      return true;
     }
     return false;
   }
@@ -381,13 +377,13 @@ public class ClientRandomWalk
     {
       for (FoodData food : data.foodSet)
       {
-        if(manhattanDistance(ant.gridX, ant.gridY, food.gridX, food.gridY) < 1)
+        int distance = manhattanDistance(ant.gridX, ant.gridY, food.gridX, food.gridY);
+        if(distance < 2)
         {
-          System.out.println("One block away");
           return pickUpFoodAdjacent(ant, action, food);
         }
         
-        if(manhattanDistance(ant.gridX, ant.gridY, food.gridX, food.gridY) < 40)
+        if(distance < 40)
         {
           return goToward(ant, food.gridX, food.gridY, action);
         }
@@ -497,9 +493,8 @@ public class ClientRandomWalk
     if (ant.ticksUntilNextAction > 0) return action;
     if (exitNest(ant, action)) return action;
     if (goHomeIfCarryingOrHurt(ant, action)) return action;
-    //if (pickUpFoodAdjacent(ant, action, data)) return action;
     if (goToFood(ant, action, data)) return action;
-    //if (pickUpWater(ant, action)) return action;
+    if (pickUpWater(ant, action)) return action;
     //if (attackAdjacent(ant, action)) return action;
     //if (goToEnemyAnt(ant, action)) return action;
     //if (goToGoodAnt(ant, action)) return action;
