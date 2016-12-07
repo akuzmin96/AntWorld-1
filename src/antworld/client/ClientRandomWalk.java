@@ -234,10 +234,15 @@ public class ClientRandomWalk
       AntAction action = chooseAction(commData, ant);
       ant.myAction = action;
     }
-    for(int i = 0; i < commData.foodStockPile.length; i++)
-    {
-      System.out.println(commData.foodStockPile[i]);
-    }
+    //for(int i = 0; i < commData.foodStockPile.length; i++)
+    //{
+    //  System.out.println(commData.foodStockPile[i]);
+    //}
+  }
+  
+  private int manhattanDistance(int x, int y, int xx, int yy)
+  {
+    return Math.abs(x - xx) + Math.abs(y - yy);
   }
 
   //=============================================================================
@@ -260,27 +265,41 @@ public class ClientRandomWalk
     return false;
   }
 
-  private boolean pickUpFoodAdjacent(AntData ant, AntAction action)
+  private boolean pickUpFoodAdjacent(AntData ant, AntAction action, FoodData food)
   {
     if (DEBUG) System.out.println("  pickUpFoodAdjactent()");
     if (ant.carryUnits > 0) return false;
+    
+    System.out.println("Food:" + food.gridX + " " + food.gridY);
+    
     for (Direction dir : Direction.values())
     {
       int x = ant.gridX + dir.deltaX();
       int y = ant.gridY + dir.deltaY();
       Pixel neighborCell = map[x][y];
-    
+      
       if (neighborCell == null) continue;
-    
+      
       if (neighborCell.getType() == 'W') continue;
-    
-      //FoodData food = neighborCell.getFood();
-    
-      //if (food == null) continue;
-    
-      action.type = AntActionType.PICKUP;
-      action.direction = dir;
-      action.quantity = ant.antType.getCarryCapacity();
+
+      System.out.println("Cell:" + neighborCell.getX() + " " + neighborCell.getY());
+      
+      if(neighborCell.getX() == food.gridX && neighborCell.getY() == food.gridY)
+      {
+        System.out.println("Neighbor cell found food");
+        action.type = AntActionType.PICKUP;
+        action.direction = dir;
+        if(food.getCount() < ant.antType.getCarryCapacity())
+        {
+          System.out.println("Picked up small food");
+          action.quantity = food.getCount();
+        }
+        else
+        {
+          System.out.println("Picked up everything");
+          action.quantity = ant.antType.getCarryCapacity();
+        }
+      }
       return true;
     }
     return false;
@@ -290,9 +309,9 @@ public class ClientRandomWalk
   {
     if(homeAction == 1 && ant.gridX < centerX + 10 && ant.gridX > centerX - 10 && ant.gridY < centerY + 10 && ant.gridY > centerY - 10)
     {
-      System.out.println("heal");
       action.type = AntActionType.ENTER_NEST;
       action.type = AntActionType.HEAL;
+      System.out.println("Healed");
       return true;
     }
     
@@ -310,11 +329,11 @@ public class ClientRandomWalk
 
   private boolean goHomeIfCarryingOrHurt(AntData ant, AntAction action)
   {
-    if(ant.health <= ant.antType.getMaxHealth()/1.75)
+    if(ant.health <= ant.antType.getMaxHealth()/1.8)
     {
       return goHome(ant, action, 1);
     }
-    else if((ant.carryUnits >= ant.antType.getCarryCapacity()/2) && (ant.carryType == FoodType.WATER))
+    else if(ant.carryUnits >= ant.antType.getCarryCapacity()/2)
     {
       return goHome(ant ,action, 2);
     }
@@ -356,8 +375,24 @@ public class ClientRandomWalk
     return false;
   }
 
-  private boolean goToFood(AntData ant, AntAction action)
+  private boolean goToFood(AntData ant, AntAction action, CommData data)
   {
+    if(!data.foodSet.isEmpty())
+    {
+      for (FoodData food : data.foodSet)
+      {
+        if(manhattanDistance(ant.gridX, ant.gridY, food.gridX, food.gridY) < 1)
+        {
+          System.out.println("One block away");
+          return pickUpFoodAdjacent(ant, action, food);
+        }
+        
+        if(manhattanDistance(ant.gridX, ant.gridY, food.gridX, food.gridY) < 40)
+        {
+          return goToward(ant, food.gridX, food.gridY, action);
+        }
+      }
+    }
     return false;
   }
 
@@ -457,38 +492,19 @@ public class ClientRandomWalk
 
   private AntAction chooseAction(CommData data, AntData ant)
   {
-    //if(data.foodSet.size() > 0)
-    //{
-    //  for (FoodData food : data.foodSet)
-    //  {
-    //    System.out.println(food.foodType);
-    //  }
-    //}
-    
     AntAction action = new AntAction(AntActionType.STASIS);
     
     if (ant.ticksUntilNextAction > 0) return action;
-    
     if (exitNest(ant, action)) return action;
-
-    //if (attackAdjacent(ant, action)) return action;
-
-    //if (pickUpFoodAdjacent(ant, action)) return action;
-
     if (goHomeIfCarryingOrHurt(ant, action)) return action;
-    
-    if (pickUpWater(ant, action)) return action;
-
+    //if (pickUpFoodAdjacent(ant, action, data)) return action;
+    if (goToFood(ant, action, data)) return action;
+    //if (pickUpWater(ant, action)) return action;
+    //if (attackAdjacent(ant, action)) return action;
     //if (goToEnemyAnt(ant, action)) return action;
-
-    //if (goToFood(ant, action)) return action;
-
     //if (goToGoodAnt(ant, action)) return action;
-
     if (goExplore(ant, action)) return action;
-    
     if (goRandom(ant, action)) return action;
-
     return action;
   }
 

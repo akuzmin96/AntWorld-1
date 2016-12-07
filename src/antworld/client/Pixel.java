@@ -16,6 +16,16 @@ public class Pixel
     this.height = height;
   }
   
+  public int getX()
+  {
+    return x;
+  }
+  
+  public int getY()
+  {
+    return y;
+  }
+  
   public char getType()
   {
     return type;
