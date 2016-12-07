@@ -11,6 +11,7 @@ import java.util.Random;
 
 import antworld.common.*;
 import antworld.common.AntAction.AntActionType;
+import antworld.server.Ant;
 
 public class ClientRandomWalk
 {
@@ -233,6 +234,10 @@ public class ClientRandomWalk
       AntAction action = chooseAction(commData, ant);
       ant.myAction = action;
     }
+    for(int i = 0; i < commData.foodStockPile.length; i++)
+    {
+      System.out.println(commData.foodStockPile[i]);
+    }
   }
 
   //=============================================================================
@@ -283,23 +288,20 @@ public class ClientRandomWalk
   
   public boolean goHome(AntData ant, AntAction action, int homeAction)
   {
-    //if(ant.gridX < centerX + 10 && ant.gridX > centerX - 10 && ant.gridY < centerY + 10 && ant.gridY > centerY - 10)
-    //{
-    //  action.type = AntActionType.ENTER_NEST;
-    //  return true;
-    //}
-    
-    //if(homeAction == 1 && ant.underground)
-    //{
-    //  action.type = AntActionType.HEAL;
-    //  return true;
-    //}
+    if(homeAction == 1 && ant.gridX < centerX + 10 && ant.gridX > centerX - 10 && ant.gridY < centerY + 10 && ant.gridY > centerY - 10)
+    {
+      action.type = AntActionType.ENTER_NEST;
+      action.type = AntActionType.HEAL;
+      return true;
+    }
     
     if(homeAction == 2 && ant.gridX < centerX + 10 && ant.gridX > centerX - 10 && ant.gridY < centerY + 10 && ant.gridY > centerY - 10)
     {
+      action.type = AntActionType.ENTER_NEST;
       action.type = AntActionType.DROP;
       action.direction = Direction.NORTH;
       action.quantity = ant.carryUnits;
+      System.out.println("Dropped food");
       return true;
     }
     
@@ -356,7 +358,6 @@ public class ClientRandomWalk
 
   private boolean goToFood(AntData ant, AntAction action)
   {
-    
     return false;
   }
 
@@ -456,13 +457,13 @@ public class ClientRandomWalk
 
   private AntAction chooseAction(CommData data, AntData ant)
   {
-    if(data.foodSet.size() > 0)
-    {
-      for (FoodData food : data.foodSet)
-      {
-        System.out.println(food.foodType);
-      }
-    }
+    //if(data.foodSet.size() > 0)
+    //{
+    //  for (FoodData food : data.foodSet)
+    //  {
+    //    System.out.println(food.foodType);
+    //  }
+    //}
     
     AntAction action = new AntAction(AntActionType.STASIS);
     
@@ -476,7 +477,7 @@ public class ClientRandomWalk
 
     if (goHomeIfCarryingOrHurt(ant, action)) return action;
     
-    //if (pickUpWater(ant, action)) return action;
+    if (pickUpWater(ant, action)) return action;
 
     //if (goToEnemyAnt(ant, action)) return action;
 
