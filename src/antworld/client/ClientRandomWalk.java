@@ -176,7 +176,7 @@ public class ClientRandomWalk
 
         CommData sendData = data.packageForSendToServer();
         
-        System.out.println("ClientRandomWalk: Sending>>>>>>>: " + sendData);
+//        System.out.println("ClientRandomWalk: Sending>>>>>>>: " + sendData);
         outputStream.writeObject(sendData);
         outputStream.flush();
         outputStream.reset();
@@ -356,6 +356,7 @@ public class ClientRandomWalk
 
   private boolean goToFood(AntData ant, AntAction action)
   {
+    
     return false;
   }
 
@@ -455,6 +456,14 @@ public class ClientRandomWalk
 
   private AntAction chooseAction(CommData data, AntData ant)
   {
+    if(data.foodSet.size() > 0)
+    {
+      for (FoodData food : data.foodSet)
+      {
+        System.out.println(food.foodType);
+      }
+    }
+    
     AntAction action = new AntAction(AntActionType.STASIS);
     
     if (ant.ticksUntilNextAction > 0) return action;
@@ -467,7 +476,7 @@ public class ClientRandomWalk
 
     if (goHomeIfCarryingOrHurt(ant, action)) return action;
     
-    if (pickUpWater(ant, action)) return action;
+    //if (pickUpWater(ant, action)) return action;
 
     //if (goToEnemyAnt(ant, action)) return action;
 
