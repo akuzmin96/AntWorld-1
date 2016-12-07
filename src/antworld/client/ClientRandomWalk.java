@@ -342,7 +342,7 @@ public class ClientRandomWalk
       {
         action.type = AntActionType.PICKUP;
         action.direction = dir;
-        action.quantity = ant.antType.getCarryCapacity()/2 - 1;
+        action.quantity = ant.antType.getCarryCapacity()/2;
         return true;
       }
     }
