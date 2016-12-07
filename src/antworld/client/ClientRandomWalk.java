@@ -33,7 +33,6 @@ public class ClientRandomWalk
   private static final int DIR_BIT_SW = 32;
   private static final int DIR_BIT_W  = 64;
   private static final int DIR_BIT_NW = 128;
-  
   private static final int DIR_BIT_ANY_N = DIR_BIT_N | DIR_BIT_NE | DIR_BIT_NW;
   private static final int DIR_BIT_ANY_S = DIR_BIT_S | DIR_BIT_SE | DIR_BIT_SW;
   private static final int DIR_BIT_ANY_E = DIR_BIT_E | DIR_BIT_NE | DIR_BIT_SE;
@@ -45,7 +44,6 @@ public class ClientRandomWalk
   //Do not create a new generator every time you want a random number nor
   //  even in every class were you want a generator.
   private static Random random = Constants.random;
-
 
   public ClientRandomWalk(String host, int portNumber)
   {
@@ -92,9 +90,7 @@ public class ClientRandomWalk
       e.printStackTrace();
       return false;
     }
-
     return true;
-
   }
 
   public void closeAll()
@@ -174,7 +170,6 @@ public class ClientRandomWalk
     { 
       try
       {
-
         if (DEBUG) System.out.println("ClientRandomWalk: chooseActions: " + myNestName);
 
         chooseActionsOfAllAnts(data);  
@@ -185,14 +180,11 @@ public class ClientRandomWalk
         outputStream.writeObject(sendData);
         outputStream.flush();
         outputStream.reset();
-       
-
+        
         if (DEBUG) System.out.println("ClientRandomWalk: listening to socket....");
         CommData receivedData = (CommData) inputStream.readObject();
         if (DEBUG) System.out.println("ClientRandomWalk: received <<<<<<<<<"+inputStream.available()+"<...\n" + receivedData);
         data = receivedData;
-  
-        
         
         if ((myNestName == null) || (data.myTeam != myTeam))
         {
@@ -204,7 +196,6 @@ public class ClientRandomWalk
         System.err.println("ClientRandomWalk***ERROR***: client read failed");
         e.printStackTrace();
         System.exit(0);
-
       }
       catch (ClassNotFoundException e)
       {
@@ -212,14 +203,12 @@ public class ClientRandomWalk
         e.printStackTrace();
         System.exit(0);
       }
-
     }
   }
   
   
   private boolean sendCommData(CommData data)
   {
-    
     CommData sendData = data.packageForSendToServer();
     try
     {
@@ -234,9 +223,7 @@ public class ClientRandomWalk
       e.printStackTrace();
       System.exit(0);
     }
-
     return true;
-    
   }
 
   private void chooseActionsOfAllAnts(CommData commData)
@@ -248,9 +235,6 @@ public class ClientRandomWalk
     }
   }
 
-
-
-
   //=============================================================================
   // This method sets the given action to EXIT_NEST if and only if the given
   //   ant is underground.
@@ -259,33 +243,12 @@ public class ClientRandomWalk
   private boolean exitNest(AntData ant, AntAction action)
   {
     if (ant.underground == false) return false;
-
-    if (ant.health < ant.antType.getMaxHealth())
-    {
-      ant.myAction.type = AntActionType.HEAL;
-      return true;
-    }
-
-    //if (ant.underground)
-    //{
-      action.type = AntActionType.EXIT_NEST;
-      action.x = centerX - (Constants.NEST_RADIUS-1) + random.nextInt(2 * (Constants.NEST_RADIUS-1));
-      action.y = centerY - (Constants.NEST_RADIUS-1) + random.nextInt(2 * (Constants.NEST_RADIUS-1));
-      return true;
-    //}
-    //return false;
+    
+    action.type = AntActionType.EXIT_NEST;
+    action.x = centerX - (Constants.NEST_RADIUS-1) + random.nextInt(2 * (Constants.NEST_RADIUS-1));
+    action.y = centerY - (Constants.NEST_RADIUS-1) + random.nextInt(2 * (Constants.NEST_RADIUS-1));
+    return true;
   }
-  
-  //Heal if ant is underground and needs healing
-  //private boolean healUnderground(AntData ant, AntAction action)
-  //{
-  //  if(ant.underground && ant.health < ant.antType.getMaxHealth())
-  //  {
-  //    action.type = AntActionType.HEAL;
-  //    return true;
-  //  }
-  //  return false;
-  //}
 
   private boolean attackAdjacent(AntData ant, AntAction action)
   {
@@ -294,11 +257,66 @@ public class ClientRandomWalk
 
   private boolean pickUpFoodAdjacent(AntData ant, AntAction action)
   {
+    if (DEBUG) System.out.println("  pickUpFoodAdjactent()");
+    if (ant.carryUnits > 0) return false;
+    for (Direction dir : Direction.values())
+    {
+      int x = ant.gridX + dir.deltaX();
+      int y = ant.gridY + dir.deltaY();
+      Pixel neighborCell = map[x][y];
+    
+      if (neighborCell == null) continue;
+    
+      if (neighborCell.getType() == 'W') continue;
+    
+      //FoodData food = neighborCell.getFood();
+    
+      //if (food == null) continue;
+    
+      action.type = AntActionType.PICKUP;
+      action.direction = dir;
+      action.quantity = ant.antType.getCarryCapacity();
+      return true;
+    }
     return false;
+  }
+  
+  public boolean goHome(AntData ant, AntAction action, int homeAction)
+  {
+    //if(ant.gridX < centerX + 10 && ant.gridX > centerX - 10 && ant.gridY < centerY + 10 && ant.gridY > centerY - 10)
+    //{
+    //  action.type = AntActionType.ENTER_NEST;
+    //  return true;
+    //}
+    
+    //if(homeAction == 1 && ant.underground)
+    //{
+    //  action.type = AntActionType.HEAL;
+    //  return true;
+    //}
+    
+    if(homeAction == 2 && ant.gridX < centerX + 10 && ant.gridX > centerX - 10 && ant.gridY < centerY + 10 && ant.gridY > centerY - 10)
+    {
+      action.type = AntActionType.DROP;
+      action.direction = Direction.NORTH;
+      action.quantity = ant.carryUnits;
+      return true;
+    }
+    
+    return goToward(ant, centerX, centerY, action);
   }
 
   private boolean goHomeIfCarryingOrHurt(AntData ant, AntAction action)
   {
+    if(ant.health < ant.antType.getMaxHealth()/2)
+    {
+      return goHome(ant, action, 1);
+    }
+    else if((ant.carryUnits >= ant.antType.getCarryCapacity()/2) && (ant.carryType == FoodType.WATER))
+    {
+      return goHome(ant ,action, 2);
+    }
+    
     return false;
   }
 
@@ -324,7 +342,7 @@ public class ClientRandomWalk
       {
         action.type = AntActionType.PICKUP;
         action.direction = dir;
-        action.quantity = ant.antType.getCarryCapacity();
+        action.quantity = ant.antType.getCarryCapacity()/2 - 1;
         return true;
       }
     }
@@ -352,7 +370,6 @@ public class ClientRandomWalk
     int goalY = 0;
     if (ant.gridX > centerX) goalX = 1000000;
     if (ant.gridY > centerY) goalY = 1000000;
-  
     int dirBits = getDirectionBitsOpen(ant);
     dirBits = getDirBitsToLocation(dirBits, ant.gridX, ant.gridY, goalX, goalY);
   
@@ -376,9 +393,7 @@ public class ClientRandomWalk
   public boolean goToward(AntData ant, int x, int y, AntAction action)
   {
     int dirBits = getDirectionBitsOpen(ant);
-    
     dirBits = getDirBitsToLocation(dirBits, ant.gridX, ant.gridY, x, y);
-    
     Direction dir = getRandomDirection(dirBits);
     
     if (dir == null) return false;
@@ -409,13 +424,10 @@ public class ClientRandomWalk
       int x = ant.gridX + dir.deltaX();
       int y = ant.gridY + dir.deltaY();
       int bit = 1 << dir.ordinal();
-      
       Pixel neighborCell = map[x][y];
       
       if (neighborCell == null) dirBits = dirBits & bit;
-      
       else if (neighborCell.getType() == 'W') dirBits -= bit;
-      
       else if (neighborCell.getType() != 'G' && ant.gridX > centerX + 10 && ant.gridX < centerX - 10 && ant.gridY > centerY + 10 && ant.gridY < centerY - 10)  dirBits -= bit;
     }
     
@@ -424,18 +436,10 @@ public class ClientRandomWalk
   
   public static int getDirBitsToLocation(int dirBits, int x, int y, int xx, int yy)
   {
-    
-    //System.out.println("  getDirBitsToLocation("+dirBits+", " + x +", " + y + ", " + xx+ ", " + yy + ")");
-    //System.out.println("0 " + dirBits  +" & DIR_BIT_ANY_E=" + DIR_BIT_ANY_E);
     if (xx <= x) dirBits = dirBits & (~DIR_BIT_ANY_E);
-    
-    //System.out.println("1 " + dirBits);
     if (xx >= x) dirBits = dirBits & (~DIR_BIT_ANY_W);
-    
-    //System.out.println("2 " + dirBits);
     if (yy <= y) dirBits = dirBits & (~DIR_BIT_ANY_S);
     if (yy >= y) dirBits = dirBits & (~DIR_BIT_ANY_N);
-    
     return dirBits;
   }
   
@@ -449,14 +453,11 @@ public class ClientRandomWalk
     return true;
   }
 
-
   private AntAction chooseAction(CommData data, AntData ant)
   {
     AntAction action = new AntAction(AntActionType.STASIS);
     
     if (ant.ticksUntilNextAction > 0) return action;
-
-    //if (healUnderground(ant, action)) return action;
 
     if (exitNest(ant, action)) return action;
 
@@ -464,7 +465,7 @@ public class ClientRandomWalk
 
     //if (pickUpFoodAdjacent(ant, action)) return action;
 
-    //if (goHomeIfCarryingOrHurt(ant, action)) return action;
+    if (goHomeIfCarryingOrHurt(ant, action)) return action;
     
     if (pickUpWater(ant, action)) return action;
 
