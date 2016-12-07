@@ -290,6 +290,7 @@ public class ClientRandomWalk
   {
     if(homeAction == 1 && ant.gridX < centerX + 10 && ant.gridX > centerX - 10 && ant.gridY < centerY + 10 && ant.gridY > centerY - 10)
     {
+      System.out.println("heal");
       action.type = AntActionType.ENTER_NEST;
       action.type = AntActionType.HEAL;
       return true;
@@ -297,7 +298,6 @@ public class ClientRandomWalk
     
     if(homeAction == 2 && ant.gridX < centerX + 10 && ant.gridX > centerX - 10 && ant.gridY < centerY + 10 && ant.gridY > centerY - 10)
     {
-      action.type = AntActionType.ENTER_NEST;
       action.type = AntActionType.DROP;
       action.direction = Direction.NORTH;
       action.quantity = ant.carryUnits;
@@ -310,7 +310,7 @@ public class ClientRandomWalk
 
   private boolean goHomeIfCarryingOrHurt(AntData ant, AntAction action)
   {
-    if(ant.health < ant.antType.getMaxHealth()/2)
+    if(ant.health <= ant.antType.getMaxHealth()/1.75)
     {
       return goHome(ant, action, 1);
     }
@@ -468,7 +468,7 @@ public class ClientRandomWalk
     AntAction action = new AntAction(AntActionType.STASIS);
     
     if (ant.ticksUntilNextAction > 0) return action;
-
+    
     if (exitNest(ant, action)) return action;
 
     //if (attackAdjacent(ant, action)) return action;

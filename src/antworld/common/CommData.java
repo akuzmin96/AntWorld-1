@@ -146,7 +146,7 @@ public class CommData implements Serializable
   /* (non-Javadoc)
    * @see java.lang.Object#toString()
    */
-/*  public String toString()
+  public String toString()
   {
     String out = "CommData["+serialVersionUID+":"+gameTick+":"+wallClockMilliSec+"]: "+ myNest + ", myTeam=" + myTeam+ "\n     ";
     if (errorMsg != null)
@@ -164,5 +164,5 @@ public class CommData implements Serializable
       }
     }
     return out;
-  }*/
+  }
 }
