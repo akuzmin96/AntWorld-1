@@ -1,0 +1,9 @@
+Ant World:
+-Spawning new ant
+-Healing
+-Combat
+-Assign a specific spot for water only
+-Action for different types of ants
+-A*
+-If carrying water and food is in range, drop water
+-Go home if carrying any amount of food

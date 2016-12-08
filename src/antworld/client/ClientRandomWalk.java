@@ -5,13 +5,10 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Random;
 
 import antworld.common.*;
 import antworld.common.AntAction.AntActionType;
-import antworld.server.Ant;
 
 public class ClientRandomWalk
 {
@@ -234,10 +231,6 @@ public class ClientRandomWalk
       AntAction action = chooseAction(commData, ant);
       ant.myAction = action;
     }
-    //for(int i = 0; i < commData.foodStockPile.length; i++)
-    //{
-    //  System.out.println(commData.foodStockPile[i]);
-    //}
   }
   
   private int manhattanDistance(int x, int y, int xx, int yy)
@@ -253,6 +246,8 @@ public class ClientRandomWalk
   private boolean exitNest(AntData ant, AntAction action)
   {
     if (ant.underground == false) return false;
+    if (ant.carryUnits > 0) return false;
+    if (ant.health < ant.antType.getMaxHealth()) return false;
     
     action.type = AntActionType.EXIT_NEST;
     action.x = centerX - (Constants.NEST_RADIUS-1) + random.nextInt(2 * (Constants.NEST_RADIUS-1));
@@ -286,7 +281,7 @@ public class ClientRandomWalk
         action.direction = dir;
         if(food.getCount() < ant.antType.getCarryCapacity())
         {
-          System.out.println("Picked up small food");
+          System.out.println("Picked up leftovers");
           action.quantity = food.getCount();
           return true;
         }
@@ -303,20 +298,26 @@ public class ClientRandomWalk
   
   public boolean goHome(AntData ant, AntAction action, int homeAction)
   {
-    if(homeAction == 1 && ant.gridX < centerX + 10 && ant.gridX > centerX - 10 && ant.gridY < centerY + 10 && ant.gridY > centerY - 10)
+    if(homeAction == 1 && ant.underground)
     {
-      action.type = AntActionType.ENTER_NEST;
       action.type = AntActionType.HEAL;
       System.out.println("Healed");
       return true;
     }
     
-    if(homeAction == 2 && ant.gridX < centerX + 10 && ant.gridX > centerX - 10 && ant.gridY < centerY + 10 && ant.gridY > centerY - 10)
+    if(homeAction == 3 && ant.underground)
     {
       action.type = AntActionType.DROP;
       action.direction = Direction.NORTH;
       action.quantity = ant.carryUnits;
       System.out.println("Dropped food");
+      return true;
+    }
+  
+    if(ant.gridX < centerX + 10 && ant.gridX > centerX - 10 && ant.gridY < centerY + 10 && ant.gridY > centerY - 10)
+    {
+      action.type = AntActionType.ENTER_NEST;
+      System.out.println("Entered nest");
       return true;
     }
     
@@ -331,7 +332,7 @@ public class ClientRandomWalk
     }
     else if(ant.carryUnits >= ant.antType.getCarryCapacity()/2)
     {
-      return goHome(ant ,action, 2);
+      return goHome(ant, action, 2);
     }
     
     return false;
@@ -492,7 +493,14 @@ public class ClientRandomWalk
     
     if (ant.ticksUntilNextAction > 0) return action;
     if (exitNest(ant, action)) return action;
-    if (goHomeIfCarryingOrHurt(ant, action)) return action;
+    if (goHomeIfCarryingOrHurt(ant, action))
+    {
+      for(int i = 0; i < data.foodStockPile.length; i++)
+      {
+        System.out.println(data.foodStockPile[i]);
+      }
+      return action;
+    }
     if (goToFood(ant, action, data)) return action;
     if (pickUpWater(ant, action)) return action;
     //if (attackAdjacent(ant, action)) return action;
