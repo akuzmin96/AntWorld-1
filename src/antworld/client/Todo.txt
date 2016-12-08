@@ -6,3 +6,11 @@ Ant World:
 -A*
 
 -If carrying water and food is in range, drop water
+
+Server Info:
+foodgame.cs.unm.edu
+port 5555
+
+Notes:
+-Use ant ID to target one ant at a time when attacking
+-Improve the exploration for better search of food
