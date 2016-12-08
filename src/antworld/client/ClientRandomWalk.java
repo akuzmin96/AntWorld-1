@@ -263,7 +263,6 @@ public class ClientRandomWalk
   private boolean pickUpFoodAdjacent(AntData ant, AntAction action, FoodData food)
   {
     if (DEBUG) System.out.println("  pickUpFoodAdjactent()");
-    if (ant.carryUnits > 0) return false;
     
     for (Direction dir : Direction.values())
     {
@@ -305,7 +304,7 @@ public class ClientRandomWalk
       return true;
     }
     
-    if(homeAction == 3 && ant.underground)
+    if(homeAction == 2 && ant.underground)
     {
       action.type = AntActionType.DROP;
       action.direction = Direction.NORTH;
@@ -334,7 +333,6 @@ public class ClientRandomWalk
     {
       return goHome(ant, action, 2);
     }
-    
     return false;
   }
 
@@ -386,6 +384,13 @@ public class ClientRandomWalk
         
         if(distance < 40)
         {
+          if(ant.carryType == FoodType.WATER)
+          {
+            action.type = AntActionType.DROP;
+            action.direction = Direction.NORTH;
+            action.quantity = ant.carryUnits;
+            return true;
+          }
           return goToward(ant, food.gridX, food.gridY, action);
         }
       }
@@ -495,10 +500,10 @@ public class ClientRandomWalk
     if (exitNest(ant, action)) return action;
     if (goHomeIfCarryingOrHurt(ant, action))
     {
-      for(int i = 0; i < data.foodStockPile.length; i++)
-      {
-        System.out.println(data.foodStockPile[i]);
-      }
+      //for(int i = 0; i < data.foodStockPile.length; i++)
+      //{
+      //  System.out.println(data.foodStockPile[i]);
+      //}
       return action;
     }
     if (goToFood(ant, action, data)) return action;
