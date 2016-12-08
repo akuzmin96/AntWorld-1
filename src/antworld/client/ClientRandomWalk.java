@@ -9,6 +9,7 @@ import java.util.Random;
 
 import antworld.common.*;
 import antworld.common.AntAction.AntActionType;
+import antworld.server.Ant;
 
 public class ClientRandomWalk
 {
@@ -226,11 +227,18 @@ public class ClientRandomWalk
 
   private void chooseActionsOfAllAnts(CommData data)
   {
+    //Print out nest food supply
+    //for(int i = 0; i < data.foodStockPile.length; i++)
+    //{
+    //  System.out.println(data.foodStockPile[i]);
+    //}
+    
     for (AntData ant : data.myAntList)
     {
       AntAction action = chooseAction(data, ant);
       ant.myAction = action;
     }
+    //Spawn attack ant
     AntData attackAnt = new AntData(-1, AntType.ATTACK, myNestName, myTeam);
     data.myAntList.add(attackAnt);
     //attackAnt.myAction = AntActionType.BIRTH;
@@ -258,8 +266,30 @@ public class ClientRandomWalk
     return true;
   }
 
-  private boolean attackAdjacent(AntData ant, AntAction action)
+  private boolean attackAdjacent(AntData ant, AntAction action, AntData enemyAnt)
   {
+    if (DEBUG) System.out.println("  attackAdjacent()");
+    System.out.println("Calling attack");
+    for (Direction dir : Direction.values())
+    {
+      int x = ant.gridX + dir.deltaX();
+      int y = ant.gridY + dir.deltaY();
+      Pixel neighborCell = map[x][y];
+    
+      if (neighborCell == null) continue;
+      
+      if (neighborCell.getType() == 'W') continue;
+      
+      if (enemyAnt.teamName == TeamNameEnum.Josh_Anton) continue;
+      
+      if (neighborCell.getX() == enemyAnt.gridX && neighborCell.getY() == enemyAnt.gridY)
+      {
+        ant.myAction.type = AntActionType.ATTACK;
+        ant.myAction.direction = dir;
+        System.out.println("Attacking ant");
+        return true;
+      }
+    }
     return false;
   }
 
@@ -368,8 +398,24 @@ public class ClientRandomWalk
     return false;
   }
 
-  private boolean goToEnemyAnt(AntData ant, AntAction action)
+  private boolean goToEnemyAnt(AntData ant, AntAction action, CommData data)
   {
+    if(!data.enemyAntSet.isEmpty())
+    {
+      System.out.println("Found enemy ant");
+      for(AntData enemyAnt : data.enemyAntSet)
+      {
+        int distance = manhattanDistance(ant.gridX, ant.gridY, enemyAnt.gridX, enemyAnt.gridY);
+        if(distance < 2)
+        {
+          return attackAdjacent(ant, action, enemyAnt);
+        }
+        if(distance < 40)
+        {
+          return goToward(ant, enemyAnt.gridX, enemyAnt.gridY, action);
+        }
+      }
+    }
     return false;
   }
 
@@ -498,17 +544,12 @@ public class ClientRandomWalk
   private AntAction chooseAction(CommData data, AntData ant)
   {
     AntAction action = new AntAction(AntActionType.STASIS);
-    for(int i = 0; i < data.foodStockPile.length; i++)
-    {
-      System.out.println(data.foodStockPile[i]);
-    }
     if (ant.ticksUntilNextAction > 0) return action;
     if (exitNest(ant, action)) return action;
-    if (goHomeIfCarryingOrHurt(ant, action)) return action;
-    if (goToFood(ant, action, data)) return action;
-    if (pickUpWater(ant, action)) return action;
-    //if (attackAdjacent(ant, action)) return action;
-    //if (goToEnemyAnt(ant, action)) return action;
+    //if (goHomeIfCarryingOrHurt(ant, action)) return action;
+    //if (goToFood(ant, action, data)) return action;
+    //if (pickUpWater(ant, action)) return action;
+    if (goToEnemyAnt(ant, action, data)) return action;
     //if (goToGoodAnt(ant, action)) return action;
     if (goExplore(ant, action)) return action;
     if (goRandom(ant, action)) return action;
