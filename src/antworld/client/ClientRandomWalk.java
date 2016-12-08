@@ -224,13 +224,16 @@ public class ClientRandomWalk
     return true;
   }
 
-  private void chooseActionsOfAllAnts(CommData commData)
+  private void chooseActionsOfAllAnts(CommData data)
   {
-    for (AntData ant : commData.myAntList)
+    for (AntData ant : data.myAntList)
     {
-      AntAction action = chooseAction(commData, ant);
+      AntAction action = chooseAction(data, ant);
       ant.myAction = action;
     }
+    AntData attackAnt = new AntData(-1, AntType.ATTACK, myNestName, myTeam);
+    data.myAntList.add(attackAnt);
+    //attackAnt.myAction = AntActionType.BIRTH;
   }
   
   private int manhattanDistance(int x, int y, int xx, int yy)
@@ -295,7 +298,7 @@ public class ClientRandomWalk
     return false;
   }
   
-  public boolean goHome(AntData ant, AntAction action, int homeAction)
+  private boolean goHome(AntData ant, AntAction action, int homeAction)
   {
     if(homeAction == 1 && ant.underground)
     {
@@ -429,7 +432,7 @@ public class ClientRandomWalk
     return goToward(ant, goalX, goalY, action);
   }
   
-  public boolean goToward(AntData ant, int x, int y, AntAction action)
+  private boolean goToward(AntData ant, int x, int y, AntAction action)
   {
     int dirBits = getDirectionBitsOpen(ant);
     dirBits = getDirBitsToLocation(dirBits, ant.gridX, ant.gridY, x, y);
@@ -441,7 +444,7 @@ public class ClientRandomWalk
     return true;
   }
   
-  public static Direction getRandomDirection(int dirBits)
+  private static Direction getRandomDirection(int dirBits)
   {
     Direction dir = Direction.getRandomDir();
     for (int i = 0; i < Direction.SIZE; i++)
@@ -473,7 +476,7 @@ public class ClientRandomWalk
     return dirBits;
   }
   
-  public static int getDirBitsToLocation(int dirBits, int x, int y, int xx, int yy)
+  private static int getDirBitsToLocation(int dirBits, int x, int y, int xx, int yy)
   {
     if (xx <= x) dirBits = dirBits & (~DIR_BIT_ANY_E);
     if (xx >= x) dirBits = dirBits & (~DIR_BIT_ANY_W);
@@ -482,7 +485,7 @@ public class ClientRandomWalk
     return dirBits;
   }
   
-  public boolean goRandom(AntData ant, AntAction action)
+  private boolean goRandom(AntData ant, AntAction action)
   {
     int dirBits = getDirectionBitsOpen(ant);
     Direction dir = getRandomDirection(dirBits);
@@ -491,21 +494,17 @@ public class ClientRandomWalk
     action.direction = dir;
     return true;
   }
-
+  
   private AntAction chooseAction(CommData data, AntData ant)
   {
     AntAction action = new AntAction(AntActionType.STASIS);
-    
+    for(int i = 0; i < data.foodStockPile.length; i++)
+    {
+      System.out.println(data.foodStockPile[i]);
+    }
     if (ant.ticksUntilNextAction > 0) return action;
     if (exitNest(ant, action)) return action;
-    if (goHomeIfCarryingOrHurt(ant, action))
-    {
-      //for(int i = 0; i < data.foodStockPile.length; i++)
-      //{
-      //  System.out.println(data.foodStockPile[i]);
-      //}
-      return action;
-    }
+    if (goHomeIfCarryingOrHurt(ant, action)) return action;
     if (goToFood(ant, action, data)) return action;
     if (pickUpWater(ant, action)) return action;
     //if (attackAdjacent(ant, action)) return action;
