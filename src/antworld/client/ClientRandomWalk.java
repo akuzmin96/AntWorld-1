@@ -9,7 +9,6 @@ import java.util.Random;
 
 import antworld.common.*;
 import antworld.common.AntAction.AntActionType;
-import antworld.server.Ant;
 
 public class ClientRandomWalk
 {
@@ -36,6 +35,8 @@ public class ClientRandomWalk
   private static final int DIR_BIT_ANY_S = DIR_BIT_S | DIR_BIT_SE | DIR_BIT_SW;
   private static final int DIR_BIT_ANY_E = DIR_BIT_E | DIR_BIT_NE | DIR_BIT_SE;
   private static final int DIR_BIT_ANY_W = DIR_BIT_W | DIR_BIT_NW | DIR_BIT_SW;
+  private int waterX = -1;
+  private int waterY = -1;
   
   private Socket clientSocket;
 
@@ -241,14 +242,13 @@ public class ClientRandomWalk
     //Spawn attack ant
     AntData attackAnt = new AntData(-1, AntType.ATTACK, myNestName, myTeam);
     data.myAntList.add(attackAnt);
-    //attackAnt.myAction = AntActionType.BIRTH;
   }
   
   private int manhattanDistance(int x, int y, int xx, int yy)
   {
     return Math.abs(x - xx) + Math.abs(y - yy);
   }
-
+  
   //=============================================================================
   // This method sets the given action to EXIT_NEST if and only if the given
   //   ant is underground.
@@ -264,218 +264,6 @@ public class ClientRandomWalk
     action.x = centerX - (Constants.NEST_RADIUS-1) + random.nextInt(2 * (Constants.NEST_RADIUS-1));
     action.y = centerY - (Constants.NEST_RADIUS-1) + random.nextInt(2 * (Constants.NEST_RADIUS-1));
     return true;
-  }
-
-  private boolean attackAdjacent(AntData ant, AntAction action, AntData enemyAnt)
-  {
-    if (DEBUG) System.out.println("  attackAdjacent()");
-    System.out.println("Calling attack");
-    for (Direction dir : Direction.values())
-    {
-      int x = ant.gridX + dir.deltaX();
-      int y = ant.gridY + dir.deltaY();
-      Pixel neighborCell = map[x][y];
-    
-      if (neighborCell == null) continue;
-      
-      if (neighborCell.getType() == 'W') continue;
-      
-      if (enemyAnt.teamName == TeamNameEnum.Josh_Anton) continue;
-      
-      if (neighborCell.getX() == enemyAnt.gridX && neighborCell.getY() == enemyAnt.gridY)
-      {
-        ant.myAction.type = AntActionType.ATTACK;
-        ant.myAction.direction = dir;
-        System.out.println("Attacking ant");
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private boolean pickUpFoodAdjacent(AntData ant, AntAction action, FoodData food)
-  {
-    if (DEBUG) System.out.println("  pickUpFoodAdjactent()");
-    
-    for (Direction dir : Direction.values())
-    {
-      int x = ant.gridX + dir.deltaX();
-      int y = ant.gridY + dir.deltaY();
-      Pixel neighborCell = map[x][y];
-      
-      if (neighborCell == null) continue;
-      
-      if (neighborCell.getType() == 'W') continue;
-      
-      if(neighborCell.getX() == food.gridX && neighborCell.getY() == food.gridY)
-      {
-        action.type = AntActionType.PICKUP;
-        action.direction = dir;
-        if(food.getCount() < ant.antType.getCarryCapacity())
-        {
-          System.out.println("Picked up leftovers");
-          action.quantity = food.getCount();
-          return true;
-        }
-        else
-        {
-          System.out.println("Picked up everything");
-          action.quantity = ant.antType.getCarryCapacity();
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-  
-  private boolean goHome(AntData ant, AntAction action, int homeAction)
-  {
-    if(homeAction == 1 && ant.underground)
-    {
-      action.type = AntActionType.HEAL;
-      System.out.println("Healed");
-      return true;
-    }
-    
-    if(homeAction == 2 && ant.underground)
-    {
-      action.type = AntActionType.DROP;
-      action.direction = Direction.NORTH;
-      action.quantity = ant.carryUnits;
-      System.out.println("Dropped food");
-      return true;
-    }
-  
-    if(ant.gridX < centerX + 10 && ant.gridX > centerX - 10 && ant.gridY < centerY + 10 && ant.gridY > centerY - 10)
-    {
-      action.type = AntActionType.ENTER_NEST;
-      System.out.println("Entered nest");
-      return true;
-    }
-    
-    return goToward(ant, centerX, centerY, action);
-  }
-
-  private boolean goHomeIfCarryingOrHurt(AntData ant, AntAction action)
-  {
-    if(ant.health <= ant.antType.getMaxHealth()/1.8)
-    {
-      return goHome(ant, action, 1);
-    }
-    else if(ant.carryUnits >= ant.antType.getCarryCapacity()/2)
-    {
-      return goHome(ant, action, 2);
-    }
-    return false;
-  }
-
-  private boolean pickUpWater(AntData ant, AntAction action)
-  {
-    if (DEBUG) System.out.println("  pickUpWater()");
-    
-    if (ant.carryUnits > 0)
-    {
-      if (ant.carryUnits >= ant.antType.getCarryCapacity()) return false;
-      if (ant.carryType != FoodType.WATER) return false;
-    }
-    
-    for (Direction dir : Direction.values())
-    {
-      int x = ant.gridX + dir.deltaX();
-      int y = ant.gridY + dir.deltaY();
-      Pixel neighborCell = map[x][y];
-    
-      if (neighborCell == null) continue;
-    
-      if (neighborCell.getType() == 'W')
-      {
-        action.type = AntActionType.PICKUP;
-        action.direction = dir;
-        action.quantity = ant.antType.getCarryCapacity()/2;
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private boolean goToEnemyAnt(AntData ant, AntAction action, CommData data)
-  {
-    if(!data.enemyAntSet.isEmpty())
-    {
-      System.out.println("Found enemy ant");
-      for(AntData enemyAnt : data.enemyAntSet)
-      {
-        int distance = manhattanDistance(ant.gridX, ant.gridY, enemyAnt.gridX, enemyAnt.gridY);
-        if(distance < 2)
-        {
-          return attackAdjacent(ant, action, enemyAnt);
-        }
-        if(distance < 40)
-        {
-          return goToward(ant, enemyAnt.gridX, enemyAnt.gridY, action);
-        }
-      }
-    }
-    return false;
-  }
-
-  private boolean goToFood(AntData ant, AntAction action, CommData data)
-  {
-    if(!data.foodSet.isEmpty())
-    {
-      for (FoodData food : data.foodSet)
-      {
-        int distance = manhattanDistance(ant.gridX, ant.gridY, food.gridX, food.gridY);
-        if(distance < 2)
-        {
-          return pickUpFoodAdjacent(ant, action, food);
-        }
-        
-        if(distance < 40)
-        {
-          if(ant.carryType == FoodType.WATER)
-          {
-            action.type = AntActionType.DROP;
-            action.direction = Direction.NORTH;
-            action.quantity = ant.carryUnits;
-            return true;
-          }
-          return goToward(ant, food.gridX, food.gridY, action);
-        }
-      }
-    }
-    return false;
-  }
-
-  private boolean goToGoodAnt(AntData ant, AntAction action)
-  {
-    return false;
-  }
-  
-  private boolean goExplore(AntData ant, AntAction action)
-  {
-    int goalX = 0;
-    int goalY = 0;
-    if (ant.gridX > centerX) goalX = 1000000;
-    if (ant.gridY > centerY) goalY = 1000000;
-    int dirBits = getDirectionBitsOpen(ant);
-    dirBits = getDirBitsToLocation(dirBits, ant.gridX, ant.gridY, goalX, goalY);
-  
-    if (action.type == AntActionType.MOVE)
-    {
-      int dx = action.direction.deltaY();
-      int dy = action.direction.deltaY();
-      int lastGoalX = goalX;
-      int lastGoalY = goalY;
-      if (dx != 0) lastGoalX = ant.gridX + dx;
-      if (dy != 0) lastGoalY = ant.gridY + dy;
-    
-      dirBits = getDirBitsToLocation(dirBits, ant.gridX, ant.gridY, lastGoalX, lastGoalY);
-    }
-    
-    if (dirBits == 0) return false;
-    
-    return goToward(ant, goalX, goalY, action);
   }
   
   private boolean goToward(AntData ant, int x, int y, AntAction action)
@@ -531,6 +319,219 @@ public class ClientRandomWalk
     return dirBits;
   }
   
+  private boolean goHome(AntData ant, AntAction action, int homeAction)
+  {
+    if(homeAction == 1 && ant.underground)
+    {
+      action.type = AntActionType.HEAL;
+      System.out.println("Healed");
+      return true;
+    }
+    
+    if(homeAction == 2 && ant.underground)
+    {
+      action.type = AntActionType.DROP;
+      action.direction = Direction.NORTH;
+      action.quantity = ant.carryUnits;
+      System.out.println("Dropped food");
+      return true;
+    }
+    
+    if(ant.gridX < centerX + 10 && ant.gridX > centerX - 10 && ant.gridY < centerY + 10 && ant.gridY > centerY - 10)
+    {
+      action.type = AntActionType.ENTER_NEST;
+      System.out.println("Entered nest");
+      return true;
+    }
+    
+    return goToward(ant, centerX, centerY, action);
+  }
+  
+  private boolean goHomeIfCarryingOrHurt(AntData ant, AntAction action)
+  {
+    if(ant.health <= ant.antType.getMaxHealth()/1.8)
+    {
+      return goHome(ant, action, 1);
+    }
+    else if(ant.carryUnits >= ant.antType.getCarryCapacity()/2)
+    {
+      return goHome(ant, action, 2);
+    }
+    return false;
+  }
+  
+  private boolean pickUpFoodAdjacent(AntData ant, AntAction action, FoodData food)
+  {
+    if (DEBUG) System.out.println("  pickUpFoodAdjactent()");
+    
+    for (Direction dir : Direction.values())
+    {
+      int x = ant.gridX + dir.deltaX();
+      int y = ant.gridY + dir.deltaY();
+      Pixel neighborCell = map[x][y];
+      
+      if (neighborCell == null) continue;
+      
+      if (neighborCell.getType() == 'W') continue;
+      
+      if(neighborCell.getX() == food.gridX && neighborCell.getY() == food.gridY)
+      {
+        action.type = AntActionType.PICKUP;
+        action.direction = dir;
+        if(food.getCount() < ant.antType.getCarryCapacity())
+        {
+          System.out.println("Picked up leftovers");
+          action.quantity = food.getCount();
+          return true;
+        }
+        else
+        {
+          System.out.println("Picked up everything");
+          action.quantity = ant.antType.getCarryCapacity();
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+  
+  private boolean goToFood(AntData ant, AntAction action, CommData data)
+  {
+    if(!data.foodSet.isEmpty())
+    {
+      for (FoodData food : data.foodSet)
+      {
+        int distance = manhattanDistance(ant.gridX, ant.gridY, food.gridX, food.gridY);
+        if(distance < 2)
+        {
+          return pickUpFoodAdjacent(ant, action, food);
+        }
+        
+        if(distance < 40)
+        {
+          if(ant.carryType == FoodType.WATER)
+          {
+            action.type = AntActionType.DROP;
+            action.direction = Direction.NORTH;
+            action.quantity = ant.carryUnits;
+            return true;
+          }
+          return goToward(ant, food.gridX, food.gridY, action);
+        }
+      }
+    }
+    return false;
+  }
+  
+  private boolean pickUpWater(AntData ant, AntAction action)
+  {
+    if (DEBUG) System.out.println("  pickUpWater()");
+    
+    if (waterX != -1 || waterY != -1) return false;
+    
+    if (ant.carryUnits > 0)
+    {
+      if (ant.carryUnits >= ant.antType.getCarryCapacity()) return false;
+      if (ant.carryType != FoodType.WATER) return goToward(ant, centerX, centerY, action);
+    }
+    
+    for (Direction dir : Direction.values())
+    {
+      int x = ant.gridX + dir.deltaX();
+      int y = ant.gridY + dir.deltaY();
+      Pixel neighborCell = map[x][y];
+      
+      if (neighborCell == null) continue;
+      
+      if (neighborCell.getType() == 'W')
+      {
+        action.type = AntActionType.PICKUP;
+        action.direction = dir;
+        action.quantity = ant.antType.getCarryCapacity()/2;
+        return true;
+      }
+    }
+    return false;
+  }
+  
+  private boolean attackAdjacent(AntData ant, AntAction action, AntData enemyAnt)
+  {
+    if (DEBUG) System.out.println("  attackAdjacent()");
+    System.out.println("Calling attack");
+    for (Direction dir : Direction.values())
+    {
+      int x = ant.gridX + dir.deltaX();
+      int y = ant.gridY + dir.deltaY();
+      Pixel neighborCell = map[x][y];
+      
+      if (neighborCell == null) continue;
+      
+      if (neighborCell.getType() == 'W') continue;
+      
+      if (enemyAnt.teamName == TeamNameEnum.Josh_Anton) continue;
+      
+      if (neighborCell.getX() == enemyAnt.gridX && neighborCell.getY() == enemyAnt.gridY)
+      {
+        action.type = AntActionType.ATTACK;
+        action.direction = dir;
+        System.out.println("Attacking ant");
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private boolean goToEnemyAnt(AntData ant, AntAction action, CommData data)
+  {
+    if(!data.enemyAntSet.isEmpty())
+    {
+      for(AntData enemyAnt : data.enemyAntSet)
+      {
+        int distance = manhattanDistance(ant.gridX, ant.gridY, enemyAnt.gridX, enemyAnt.gridY);
+        if(distance < 2)
+        {
+          return attackAdjacent(ant, action, enemyAnt);
+        }
+        if(distance < 40)
+        {
+          return goToward(ant, enemyAnt.gridX, enemyAnt.gridY, action);
+        }
+      }
+    }
+    return false;
+  }
+  
+  private boolean goToGoodAnt(AntData ant, AntAction action)
+  {
+    return false;
+  }
+  
+  private boolean goExplore(AntData ant, AntAction action)
+  {
+    int goalX = 0;
+    int goalY = 0;
+    if (ant.gridX > centerX) goalX = 1000000;
+    if (ant.gridY > centerY) goalY = 1000000;
+    int dirBits = getDirectionBitsOpen(ant);
+    dirBits = getDirBitsToLocation(dirBits, ant.gridX, ant.gridY, goalX, goalY);
+    
+    if (action.type == AntActionType.MOVE)
+    {
+      int dx = action.direction.deltaY();
+      int dy = action.direction.deltaY();
+      int lastGoalX = goalX;
+      int lastGoalY = goalY;
+      if (dx != 0) lastGoalX = ant.gridX + dx;
+      if (dy != 0) lastGoalY = ant.gridY + dy;
+      
+      dirBits = getDirBitsToLocation(dirBits, ant.gridX, ant.gridY, lastGoalX, lastGoalY);
+    }
+    
+    if (dirBits == 0) return false;
+    
+    return goToward(ant, goalX, goalY, action);
+  }
+  
   private boolean goRandom(AntData ant, AntAction action)
   {
     int dirBits = getDirectionBitsOpen(ant);
@@ -546,9 +547,9 @@ public class ClientRandomWalk
     AntAction action = new AntAction(AntActionType.STASIS);
     if (ant.ticksUntilNextAction > 0) return action;
     if (exitNest(ant, action)) return action;
-    //if (goHomeIfCarryingOrHurt(ant, action)) return action;
-    //if (goToFood(ant, action, data)) return action;
-    //if (pickUpWater(ant, action)) return action;
+    if (goHomeIfCarryingOrHurt(ant, action)) return action;
+    if (goToFood(ant, action, data)) return action;
+    if (pickUpWater(ant, action)) return action;
     if (goToEnemyAnt(ant, action, data)) return action;
     //if (goToGoodAnt(ant, action)) return action;
     if (goExplore(ant, action)) return action;

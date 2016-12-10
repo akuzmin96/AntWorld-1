@@ -1,16 +1,19 @@
 Ant World:
--Spawning new ant
+-Spawning new ant (have a priority)
 -Combat
+-If enemy ant has food, attack it!
 -Assign a specific spot for water only
 -Action for different types of ants
--A*
-
+-A* ???
 -If carrying water and food is in range, drop water
+-Improve the exploration for better search of food
+-Have ants go out in pulses. Go out to a certain distance, then come back, go out then come back
 
 Server Info:
 foodgame.cs.unm.edu
 port 5555
 
-Notes:
+Dealing with enemy ants:
 -Use ant ID to target one ant at a time when attacking
--Improve the exploration for better search of food
+-Have an attack target id list for every ant. If it is -1, then assign new target, else continue with current target
+-Have certain number of 'engaged' ants. Don't need 25 ants attacking 1 target, even though they are in range

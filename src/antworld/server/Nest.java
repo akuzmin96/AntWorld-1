@@ -51,9 +51,6 @@ public class Nest extends NestData implements Serializable
     idCounter++;
 
     foodStockPile[FoodType.WATER.ordinal()] = Constants.INITIAL_NEST_WATER_UNITS;
-    foodStockPile[FoodType.NECTAR.ordinal()] = 0;
-    foodStockPile[FoodType.SEEDS.ordinal()] = 0;
-    foodStockPile[FoodType.MEAT.ordinal()] = 0;
     spawnInitialAnts(null, TeamNameEnum.NEARLY_BRAINLESS_BOTS);
     
   }
