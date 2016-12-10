@@ -353,7 +353,11 @@ public class ClientRandomWalk
     {
       return goHome(ant, action, 1);
     }
-    else if(ant.carryUnits >= ant.antType.getCarryCapacity()/2)
+    else if(ant.carryUnits > 0 && ant.carryType != FoodType.WATER)
+    {
+      return goHome(ant, action, 2);
+    }
+    else if(ant.carryUnits >= ant.antType.getCarryCapacity()/2 - 1 && ant.carryType == FoodType.WATER)
     {
       return goHome(ant, action, 2);
     }
@@ -427,13 +431,9 @@ public class ClientRandomWalk
   {
     if (DEBUG) System.out.println("  pickUpWater()");
     
-    if (waterX != -1 || waterY != -1) return false;
+    int distance = manhattanDistance(ant.gridX, ant.gridY, waterX, waterY);
     
-    if (ant.carryUnits > 0)
-    {
-      if (ant.carryUnits >= ant.antType.getCarryCapacity()) return false;
-      if (ant.carryType != FoodType.WATER) return goToward(ant, centerX, centerY, action);
-    }
+    if ((waterX != -1 || waterY != -1) && distance > 2) return goToward(ant, waterX, waterY, action);
     
     for (Direction dir : Direction.values())
     {
@@ -445,9 +445,14 @@ public class ClientRandomWalk
       
       if (neighborCell.getType() == 'W')
       {
+        if(waterX == -1 || waterY == -1)
+        {
+          waterX = neighborCell.getX();
+          waterY = neighborCell.getY();
+        }
         action.type = AntActionType.PICKUP;
         action.direction = dir;
-        action.quantity = ant.antType.getCarryCapacity()/2;
+        action.quantity = ant.antType.getCarryCapacity()/2 - 1;
         return true;
       }
     }
@@ -548,9 +553,9 @@ public class ClientRandomWalk
     if (ant.ticksUntilNextAction > 0) return action;
     if (exitNest(ant, action)) return action;
     if (goHomeIfCarryingOrHurt(ant, action)) return action;
-    if (goToFood(ant, action, data)) return action;
+    //if (goToFood(ant, action, data)) return action;
     if (pickUpWater(ant, action)) return action;
-    if (goToEnemyAnt(ant, action, data)) return action;
+    //if (goToEnemyAnt(ant, action, data)) return action;
     //if (goToGoodAnt(ant, action)) return action;
     if (goExplore(ant, action)) return action;
     if (goRandom(ant, action)) return action;
