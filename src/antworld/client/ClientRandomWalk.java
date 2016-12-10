@@ -230,12 +230,6 @@ public class ClientRandomWalk
 
   private void chooseActionsOfAllAnts(CommData data)
   {
-    //Print out nest food supply
-    //for(int i = 0; i < data.foodStockPile.length; i++)
-    //{
-    //  System.out.println(data.foodStockPile[i]);
-    //}
-    
     for (AntData ant : data.myAntList)
     {
       AntAction action = chooseAction(data, ant);
@@ -266,6 +260,28 @@ public class ClientRandomWalk
     action.x = centerX - (Constants.NEST_RADIUS-1) + random.nextInt(2 * (Constants.NEST_RADIUS-1));
     action.y = centerY - (Constants.NEST_RADIUS-1) + random.nextInt(2 * (Constants.NEST_RADIUS-1));
     return true;
+  }
+  
+  private boolean unStickAnts(AntData ant, AntAction action, CommData data)
+  {
+    int neighborCounter = 0;
+    for(AntData neighborAnt : data.myAntList)
+    {
+      if(manhattanDistance(ant.gridX, ant.gridY, neighborAnt.gridX, neighborAnt.gridY) < 2 && data.gameTick > 200)
+      {
+        neighborCounter++;
+      }
+    }
+    
+    if(neighborCounter > 2)
+    {
+      int dirBits = getDirectionBitsOpen(ant);
+      Direction dir = getRandomDirection(dirBits);
+      action.type = AntActionType.MOVE;
+      action.direction = dir;
+      return true;
+    }
+    return false;
   }
   
   private boolean goToward(AntData ant, int x, int y, AntAction action)
@@ -321,7 +337,7 @@ public class ClientRandomWalk
     return dirBits;
   }
   
-  private boolean goHome(AntData ant, AntAction action, int homeAction)
+  private boolean goHome(AntData ant, AntAction action, int homeAction, CommData data)
   {
     if(homeAction == 1 && ant.underground)
     {
@@ -335,7 +351,12 @@ public class ClientRandomWalk
       action.type = AntActionType.DROP;
       action.direction = Direction.NORTH;
       action.quantity = ant.carryUnits;
-      System.out.println("Dropped food");
+      
+      //Print out nest food supply
+      for(int i = 0; i < data.foodStockPile.length; i++)
+      {
+        System.out.println(data.foodStockPile[i]);
+      }
       return true;
     }
     
@@ -349,19 +370,19 @@ public class ClientRandomWalk
     return goToward(ant, centerX, centerY, action);
   }
   
-  private boolean goHomeIfCarryingOrHurt(AntData ant, AntAction action)
+  private boolean goHomeIfCarryingOrHurt(AntData ant, AntAction action, CommData data)
   {
     if(ant.health <= ant.antType.getMaxHealth()/1.8)
     {
-      return goHome(ant, action, 1);
+      return goHome(ant, action, 1, data);
     }
     else if(ant.carryUnits > 0 && ant.carryType != FoodType.WATER)
     {
-      return goHome(ant, action, 2);
+      return goHome(ant, action, 2, data);
     }
     else if(ant.carryUnits >= ant.antType.getCarryCapacity() && ant.carryType == FoodType.WATER)
     {
-      return goHome(ant, action, 2);
+      return goHome(ant, action, 2, data);
     }
     return false;
   }
@@ -433,19 +454,20 @@ public class ClientRandomWalk
   {
     if (DEBUG) System.out.println("  pickUpWater()");
     
-    if (data.foodStockPile[0] > 1000) return false;
-    
     int distance = manhattanDistance(ant.gridX, ant.gridY, waterX, waterY);
     
-    if (distance < 25 && waterAnts.size() < 11)
+    if (distance < 45 && waterAnts.size() < 10)
     {
       waterAnts.add(ant);
       System.out.println("Adding ant to list for water");
     }
     
-    if(!waterAnts.contains(ant) && !waterAnts.isEmpty()) return false;
+    if (!waterAnts.contains(ant) && !waterAnts.isEmpty()) return false;
     
-    if ((waterX != -1 || waterY != -1) && distance > 2) return goToward(ant, waterX, waterY, action);
+    if ((waterX != -1 || waterY != -1) && distance > 2 && waterAnts.contains(ant))
+    {
+      return goToward(ant, waterX, waterY, action);
+    }
     
     for (Direction dir : Direction.values())
     {
@@ -564,10 +586,11 @@ public class ClientRandomWalk
     AntAction action = new AntAction(AntActionType.STASIS);
     if (ant.ticksUntilNextAction > 0) return action;
     if (exitNest(ant, action)) return action;
-    if (goHomeIfCarryingOrHurt(ant, action)) return action;
-    //if (goToFood(ant, action, data)) return action;
+    if (unStickAnts(ant, action, data)) return action;
+    if (goHomeIfCarryingOrHurt(ant, action, data)) return action;
+    if (goToFood(ant, action, data)) return action;
     if (pickUpWater(ant, action, data)) return action;
-    //if (goToEnemyAnt(ant, action, data)) return action;
+    if (goToEnemyAnt(ant, action, data)) return action;
     //if (goToGoodAnt(ant, action)) return action;
     if (goExplore(ant, action)) return action;
     if (goRandom(ant, action)) return action;
