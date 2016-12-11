@@ -35,10 +35,6 @@ public class ClientRandomWalk
   private static final int DIR_BIT_SW = 32;
   private static final int DIR_BIT_W  = 64;
   private static final int DIR_BIT_NW = 128;
-  private static final int DIR_BIT_ANY_N = DIR_BIT_N | DIR_BIT_NE | DIR_BIT_NW;
-  private static final int DIR_BIT_ANY_S = DIR_BIT_S | DIR_BIT_SE | DIR_BIT_SW;
-  private static final int DIR_BIT_ANY_E = DIR_BIT_E | DIR_BIT_NE | DIR_BIT_SE;
-  private static final int DIR_BIT_ANY_W = DIR_BIT_W | DIR_BIT_NW | DIR_BIT_SW;
   private int waterX = -1;
   private int waterY = -1;
   private double exitAngle = 0;
@@ -47,6 +43,7 @@ public class ClientRandomWalk
   private int exitCountForInitial = 0;
   private int exitX = centerX, exitY = centerY;
   private ArrayList<AntData> waterAnts = new ArrayList<>();
+  private ArrayList<AntHistory> antHistories = new ArrayList<>();
   
   private Socket clientSocket;
 
@@ -176,6 +173,11 @@ public class ClientRandomWalk
     
   public void mainGameLoop(CommData data)
   {
+    for(AntData ant : data.myAntList)
+    {
+      antHistories.add(new AntHistory(ant.id));
+    }
+    
     while (true)
     { 
       try
@@ -244,8 +246,8 @@ public class ClientRandomWalk
       ant.myAction = action;
     }
     //Spawn attack ant
-    AntData attackAnt = new AntData(-1, AntType.ATTACK, myNestName, myTeam);
-    data.myAntList.add(attackAnt);
+    //AntData attackAnt = new AntData(-1, AntType.ATTACK, myNestName, myTeam);
+    //data.myAntList.add(attackAnt);
   }
   
   private int manhattanDistance(int x, int y, int xx, int yy)
@@ -599,21 +601,44 @@ public class ClientRandomWalk
       for(AntData enemyAnt : data.enemyAntSet)
       {
         int distance = manhattanDistance(ant.gridX, ant.gridY, enemyAnt.gridX, enemyAnt.gridY);
+        
         if(distance < 2)
         {
+          System.out.println(ant.id + " calling attack adjacent");
           return attackAdjacent(ant, action, enemyAnt);
         }
-        if(distance < 40)
+        
+        for (AntHistory history : antHistories)
         {
-          return goToward(ant, enemyAnt.gridX, enemyAnt.gridY, action);
+          if(ant.id == history.getAntID())
+          {
+            //if(!data.enemyAntSet.contains(history.getEnemyAnt()))
+            //{
+            //  System.out.println(ant.id + " removed ant from list ");
+            //  history.setEnemyAnt(null);
+            //}
+            
+            if(history.getEnemyAnt() != null)
+            {
+              if(history.getEnemyAnt().id == enemyAnt.id)
+              {
+                history.getEnemyAnt().gridX = enemyAnt.gridX;
+                history.getEnemyAnt().gridY = enemyAnt.gridY;
+              }
+              
+              System.out.println(ant.id + " going to enemy ant " + history.getEnemyAnt().id);
+              return goToward(ant, history.getEnemyAnt().gridX, history.getEnemyAnt().gridY, action);
+            }
+            
+            if(distance < 40 && history.getEnemyAnt() == null)
+            {
+              System.out.println(ant.id + " setting new enemy ant " + enemyAnt.id);
+              history.setEnemyAnt(enemyAnt);
+            }
+          }
         }
       }
     }
-    return false;
-  }
-  
-  private boolean goToGoodAnt(AntData ant, AntAction action)
-  {
     return false;
   }
 
@@ -643,13 +668,12 @@ public class ClientRandomWalk
     AntAction action = new AntAction(AntActionType.STASIS);
     if (ant.ticksUntilNextAction > 0) return action;
     if (exitNest(ant, action, data)) return action;
-    if(data.gameTick < 150) return new AntAction(AntActionType.STASIS);
-    if (unStickAnts(ant, action, data)) return action;
-    if (goHomeIfCarryingOrHurt(ant, action, data)) return action;
-    if (goToFood(ant, action, data)) return action;
-    if (pickUpWater(ant, action, data)) return action;
+    //if (data.gameTick < 150) return new AntAction(AntActionType.STASIS);
+    //if (unStickAnts(ant, action, data)) return action;
+    //if (goHomeIfCarryingOrHurt(ant, action, data)) return action;
+    //if (goToFood(ant, action, data)) return action;
+    //if (pickUpWater(ant, action, data)) return action;
     if (goToEnemyAnt(ant, action, data)) return action;
-    //if (goToGoodAnt(ant, action)) return action;
     if (goExplore(ant, action)) return action;
     if (goRandom(ant, action)) return action;
     return action;
