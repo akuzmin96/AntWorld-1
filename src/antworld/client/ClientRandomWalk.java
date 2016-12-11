@@ -11,6 +11,9 @@ import java.util.Random;
 import antworld.common.*;
 import antworld.common.AntAction.AntActionType;
 
+import static java.lang.Math.*;
+import static oracle.jrockit.jfr.events.Bits.intValue;
+
 public class ClientRandomWalk
 {
   private static final boolean DEBUG = false;
@@ -38,6 +41,11 @@ public class ClientRandomWalk
   private static final int DIR_BIT_ANY_W = DIR_BIT_W | DIR_BIT_NW | DIR_BIT_SW;
   private int waterX = -1;
   private int waterY = -1;
+  private double exitAngle = 0;
+  private boolean firstExit = true;
+  private double explorationDistance = 100;
+  private int exitCountForInitial = 0;
+  private int exitX = centerX, exitY = centerY;
   private ArrayList<AntData> waterAnts = new ArrayList<>();
   
   private Socket clientSocket;
@@ -250,15 +258,46 @@ public class ClientRandomWalk
   //   ant is underground.
   // Returns true if an action was set. Otherwise returns false
   //=============================================================================
-  private boolean exitNest(AntData ant, AntAction action)
+  private boolean exitNest(AntData ant, AntAction action, CommData data)
   {
     if (ant.underground == false) return false;
     if (ant.carryUnits > 0) return false;
     if (ant.health < ant.antType.getMaxHealth()) return false;
-    
+
     action.type = AntActionType.EXIT_NEST;
-    action.x = centerX - (Constants.NEST_RADIUS-1) + random.nextInt(2 * (Constants.NEST_RADIUS-1));
-    action.y = centerY - (Constants.NEST_RADIUS-1) + random.nextInt(2 * (Constants.NEST_RADIUS-1));
+
+    if(firstExit)
+    {
+      double exitIncrement = 6 * Math.PI/data.myAntList.size();
+
+      if(exitCountForInitial >= data.myAntList.size()) firstExit = false;
+
+      if(exitAngle < 2 * Math.PI)
+      {
+        action.x = centerX + intValue(15 * cos(exitAngle));
+        action.y = centerY + intValue(15 * sin(exitAngle));
+        exitAngle += exitIncrement;
+      }
+      else if(exitAngle < 4 * Math.PI)
+      {
+        action.x = centerX + intValue(10 * cos(exitAngle));
+        action.y = centerY + intValue(10 * sin(exitAngle));
+        exitAngle += exitIncrement;
+      }
+      else
+      {
+        action.x = centerX + intValue(5 * cos(exitAngle));
+        action.y = centerY + intValue(5 * sin(exitAngle));
+        exitAngle += exitIncrement;
+      }
+      exitCountForInitial++;
+    }
+    else
+    {
+      action.x = centerX - (Constants.NEST_RADIUS - 1) + random.nextInt(2 * (Constants.NEST_RADIUS - 1));
+      action.y = centerY - (Constants.NEST_RADIUS - 1) + random.nextInt(2 * (Constants.NEST_RADIUS - 1));
+    }
+
     return true;
   }
   
@@ -327,13 +366,46 @@ public class ClientRandomWalk
     
     return dirBits;
   }
-  
+
   private static int getDirBitsToLocation(int dirBits, int x, int y, int xx, int yy)
   {
-    if (xx <= x) dirBits = dirBits & (~DIR_BIT_ANY_E);
-    if (xx >= x) dirBits = dirBits & (~DIR_BIT_ANY_W);
-    if (yy <= y) dirBits = dirBits & (~DIR_BIT_ANY_S);
-    if (yy >= y) dirBits = dirBits & (~DIR_BIT_ANY_N);
+    double angle = atan2(yy - y,xx - x);
+    angle = toDegrees(angle);
+    angle += 180;
+
+    if(angle > 22.5 && angle <= 67.5)
+    {
+      dirBits = dirBits & (DIR_BIT_NW);
+    }
+    else if(angle > 67.5 && angle <= 112.5)
+    {
+      dirBits = dirBits & (DIR_BIT_N);
+    }
+    else if(angle > 112.5 && angle <= 157.5)
+    {
+      dirBits = dirBits & (DIR_BIT_NE);
+    }
+    else if(angle > 157.5 && angle <= 202.5)
+    {
+      dirBits = dirBits & (DIR_BIT_E);
+    }
+    else if(angle > 202.5 && angle <= 247.5)
+    {
+      dirBits = dirBits & (DIR_BIT_SE);
+    }
+    else if(angle > 247.5 && angle <= 292.5)
+    {
+      dirBits = dirBits & (DIR_BIT_S);
+    }
+    else if(angle > 292.5 && angle <= 337.5)
+    {
+      dirBits = dirBits & (DIR_BIT_SW);
+    }
+    else
+    {
+      dirBits = dirBits & (DIR_BIT_W);
+    }
+
     return dirBits;
   }
   
@@ -544,30 +616,15 @@ public class ClientRandomWalk
   {
     return false;
   }
-  
+
   private boolean goExplore(AntData ant, AntAction action)
   {
-    int goalX = 0;
-    int goalY = 0;
-    if (ant.gridX > centerX) goalX = 1000000;
-    if (ant.gridY > centerY) goalY = 1000000;
-    int dirBits = getDirectionBitsOpen(ant);
-    dirBits = getDirBitsToLocation(dirBits, ant.gridX, ant.gridY, goalX, goalY);
-    
-    if (action.type == AntActionType.MOVE)
-    {
-      int dx = action.direction.deltaY();
-      int dy = action.direction.deltaY();
-      int lastGoalX = goalX;
-      int lastGoalY = goalY;
-      if (dx != 0) lastGoalX = ant.gridX + dx;
-      if (dy != 0) lastGoalY = ant.gridY + dy;
-      
-      dirBits = getDirBitsToLocation(dirBits, ant.gridX, ant.gridY, lastGoalX, lastGoalY);
-    }
-    
-    if (dirBits == 0) return false;
-    
+
+    double angle = atan2(ant.gridY - centerY,ant.gridX - centerX);
+
+    int goalX = intValue(100000 * cos(angle));
+    int goalY = intValue(100000 * sin(angle));
+
     return goToward(ant, goalX, goalY, action);
   }
   
@@ -585,7 +642,8 @@ public class ClientRandomWalk
   {
     AntAction action = new AntAction(AntActionType.STASIS);
     if (ant.ticksUntilNextAction > 0) return action;
-    if (exitNest(ant, action)) return action;
+    if (exitNest(ant, action, data)) return action;
+    if(data.gameTick < 150) return new AntAction(AntActionType.STASIS);
     if (unStickAnts(ant, action, data)) return action;
     if (goHomeIfCarryingOrHurt(ant, action, data)) return action;
     if (goToFood(ant, action, data)) return action;
