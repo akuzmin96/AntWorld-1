@@ -198,7 +198,7 @@ public class ClientRandomWalk
 
         CommData sendData = data.packageForSendToServer();
         
-//        System.out.println("ClientRandomWalk: Sending>>>>>>>: " + sendData);
+        System.out.println("ClientRandomWalk: Sending>>>>>>>: " + sendData);
         outputStream.writeObject(sendData);
         outputStream.flush();
         outputStream.reset();
@@ -726,21 +726,15 @@ public class ClientRandomWalk
   
   private boolean goExplore(AntData ant, AntAction action, CommData data)
   {
-
     int distance = manhattanDistance(centerX, centerY, ant.gridX, ant.gridY);
     boolean notReturning = true;
 
     if(historyForExploring.contains(ant.id)) notReturning = false;
-  
-    if(notReturning && unStickOnWater(ant, action))
-    {
-      return true;
-    }
     
     double angle = atan2(ant.gridY - centerY,ant.gridX - centerX);
 
-    int goalX = intValue(100000 * cos(angle));
-    int goalY = intValue(100000 * sin(angle));
+    int goalX = intValue(100000 * cos(angle)) + random.nextInt(400) - 200;
+    int goalY = intValue(100000 * sin(angle)) + random.nextInt(400) - 200;
 
     //System.out.println("antID: " + ant.id + " angle" + angle);
 
@@ -766,7 +760,8 @@ public class ClientRandomWalk
       }
       else if (!notReturning && distance > 45)
       {
-        return goToward(ant, centerX, centerY, action);
+        goalX = intValue(100000 * cos(angle + Math.PI)) + random.nextInt(200) - 100;
+        goalY = intValue(100000 * sin(angle + Math.PI)) + random.nextInt(200) - 100;
       }
       else
       {
@@ -782,7 +777,7 @@ public class ClientRandomWalk
           }
         }
 
-        if(historyForExploring.size() < data.myAntList.size()/10)
+        if(historyForExploring.size() < data.myAntList.size()/2)
         {
           isTwisting = false;
           setPreviousTick = true;
@@ -796,6 +791,11 @@ public class ClientRandomWalk
           }
         }
       }
+    }
+
+    if(notReturning && unStickOnWater(ant, action))
+    {
+      return true;
     }
 
     return goToward(ant, goalX, goalY, action);
@@ -816,11 +816,10 @@ public class ClientRandomWalk
     AntAction action = new AntAction(AntActionType.STASIS);
     if (ant.ticksUntilNextAction > 0) return action;
     if (exitNest(ant, action, data)) return action;
-    //if (data.gameTick < 150) return new AntAction(AntActionType.STASIS);
     if (unStickAnts(ant, action, data)) return action;
-    //if (goHomeIfCarryingOrHurt(ant, action, data)) return action;
-    //if (goToFood(ant, action, data)) return action;
-    //if (pickUpWater(ant, action, data)) return action;
+    if (goHomeIfCarryingOrHurt(ant, action, data)) return action;
+    if (goToFood(ant, action, data)) return action;
+    if (pickUpWater(ant, action, data)) return action;
     //if (goToEnemyAnt(ant, action, data)) return action;
     //if (unStickOnWater(ant, action)) return action;
     if (goExplore(ant, action, data)) return action;

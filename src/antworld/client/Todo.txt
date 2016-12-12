@@ -4,11 +4,6 @@ Ant World:
 
 -If carrying water and food is in range, drop water
 
--Combat
--If enemy ant has food, attack it!
-
--Unstick ant when near water
--Keep track of the ants getting water
 
 Server Info:
 foodgame.cs.unm.edu
