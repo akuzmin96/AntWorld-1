@@ -601,10 +601,18 @@ public class ClientRandomWalk
       for(AntData enemyAnt : data.enemyAntSet)
       {
         int distance = manhattanDistance(ant.gridX, ant.gridY, enemyAnt.gridX, enemyAnt.gridY);
-        
+
+        for (AntHistory history : antHistories)
+        {
+          if (history.getAntID() == ant.id && distance > 40 && history.getEnemyAnt() != null)
+          {
+            System.out.println("********************** resetting ant id for " + ant.id);
+            history.setEnemyAnt(null);
+          }
+        }
+
         if(distance < 2)
         {
-          System.out.println(ant.id + " calling attack adjacent");
           return attackAdjacent(ant, action, enemyAnt);
         }
         
@@ -612,20 +620,10 @@ public class ClientRandomWalk
         {
           if(ant.id == history.getAntID())
           {
-            //if(!data.enemyAntSet.contains(history.getEnemyAnt()))
-            //{
-            //  System.out.println(ant.id + " removed ant from list ");
-            //  history.setEnemyAnt(null);
-            //}
-            
             if(history.getEnemyAnt() != null)
             {
-              if(history.getEnemyAnt().id == enemyAnt.id)
-              {
-                history.getEnemyAnt().gridX = enemyAnt.gridX;
-                history.getEnemyAnt().gridY = enemyAnt.gridY;
-              }
-              
+              history.setEnemyAnt(enemyAnt);
+
               System.out.println(ant.id + " going to enemy ant " + history.getEnemyAnt().id);
               return goToward(ant, history.getEnemyAnt().gridX, history.getEnemyAnt().gridY, action);
             }
