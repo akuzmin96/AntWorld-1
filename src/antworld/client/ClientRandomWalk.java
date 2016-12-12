@@ -41,9 +41,9 @@ public class ClientRandomWalk
   private int waterY = -1;
   private double exitAngle = 0;
   private boolean firstExit = true;
-  private int explorationDistance = 150;
+  private int explorationDistance = 200;
   private int lastExplorationDistance = 0;
-  private int explorationTwistTick = 30;
+  private int explorationTwistTick = 60;
   private int lastExplorationTwistTick = 0;
   private boolean setPreviousTick = true;
   private int previousTick = 0;
@@ -714,8 +714,7 @@ public class ClientRandomWalk
 
   private boolean goExplore(AntData ant, AntAction action, CommData data)
   {
-    int goalX = 0;
-    int goalY = 0;
+
     int distance = manhattanDistance(centerX, centerY, ant.gridX, ant.gridY);
     boolean notReturning = true;
 
@@ -723,26 +722,22 @@ public class ClientRandomWalk
 
     double angle = atan2(ant.gridY - centerY,ant.gridX - centerX);
 
-    if(distance <= explorationDistance && !isTwisting && notReturning)
+    int goalX = intValue(100000 * cos(angle));
+    int goalY = intValue(100000 * sin(angle));
+
+    //System.out.println("antID: " + ant.id + " angle" + angle);
+
+    if(setPreviousTick && notReturning && distance >= explorationDistance)
     {
-      goalX = intValue(100000 * cos(angle));
-      goalY = intValue(100000 * sin(angle));
+      isTwisting = true;
+      previousTick = data.gameTick;
+      setPreviousTick = false;
       lastExplorationDistance = explorationDistance;
       lastExplorationTwistTick = explorationTwistTick;
     }
-    else
+    else if(isTwisting)
     {
-      if(setPreviousTick)
-      {
-        isTwisting = true;
-        previousTick = data.gameTick;
-        setPreviousTick = false;
-      }
-    }
-
-    if(isTwisting)
-    {
-      System.out.println(previousTick);
+      //System.out.println("previousTick" + previousTick);
       if(data.gameTick <= previousTick + explorationTwistTick)
       {
         if (!historyForExploring.contains(ant.id))
@@ -756,29 +751,31 @@ public class ClientRandomWalk
       {
         return goToward(ant, centerX, centerY, action);
       }
-      else if (!notReturning && distance <= 45)
+      else
       {
 
         int i;
 
-        for(i = 0; i < historyForExploring.size(); i++)
+        for(i = 0; i < historyForExploring.size() - 1; i++)
         {
           if(historyForExploring.get(i) == ant.id)
           {
+            historyForExploring.remove(i);
             break;
           }
         }
 
-        historyForExploring.remove(i);
-
-        if(historyForExploring.size() < 10)
+        if(historyForExploring.size() < data.myAntList.size()/10)
         {
           isTwisting = false;
           setPreviousTick = true;
           if (lastExplorationDistance == explorationDistance && lastExplorationTwistTick == explorationTwistTick)
           {
-            explorationDistance += 150;
-            explorationTwistTick += 30;
+            if(explorationDistance <= 800)
+            {
+              explorationDistance += 100;
+              explorationTwistTick += 30;
+            }
           }
         }
       }
@@ -804,12 +801,12 @@ public class ClientRandomWalk
     if (exitNest(ant, action, data)) return action;
     //if (data.gameTick < 150) return new AntAction(AntActionType.STASIS);
     if (unStickAnts(ant, action, data)) return action;
-    if (goHomeIfCarryingOrHurt(ant, action, data)) return action;
-    if (goToFood(ant, action, data)) return action;
-    if (pickUpWater(ant, action, data)) return action;
-    if (goToEnemyAnt(ant, action, data)) return action;
+    //if (goHomeIfCarryingOrHurt(ant, action, data)) return action;
+    //if (goToFood(ant, action, data)) return action;
+    //if (pickUpWater(ant, action, data)) return action;
+    //if (goToEnemyAnt(ant, action, data)) return action;
     if (goExplore(ant, action, data)) return action;
-    if (goRandom(ant, action)) return action;
+    //if (goRandom(ant, action)) return action;
     return action;
   }
 
