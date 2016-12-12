@@ -302,7 +302,7 @@ public class ClientRandomWalk
 
     return true;
   }
-  
+
   private boolean unStickAnts(AntData ant, AntAction action, CommData data)
   {
     int neighborCounter = 0;
@@ -320,6 +320,52 @@ public class ClientRandomWalk
       Direction dir = getRandomDirection(dirBits);
       action.type = AntActionType.MOVE;
       action.direction = dir;
+      return true;
+    }
+
+    if(!waterAnts.contains(ant))// && !waterAnts.isEmpty())
+    {
+      if(map[ant.gridX][ant.gridY - 1].getType() == 'W')
+      {
+        action.direction = Direction.NORTHEAST;
+        System.out.println("ass");
+      }
+      if(map[ant.gridX + 1][ant.gridY - 1].getType() == 'W')
+      {
+        action.direction = Direction.EAST;
+        System.out.println("ass");
+      }
+      if(map[ant.gridX + 1][ant.gridY].getType() == 'W')
+      {
+        action.direction = Direction.SOUTHEAST;
+        System.out.println("ass");
+      }
+      if(map[ant.gridX + 1][ant.gridY + 1].getType() == 'W')
+      {
+        action.direction = Direction.SOUTH;
+        System.out.println("ass");
+      }
+      if(map[ant.gridX][ant.gridY + 1].getType() == 'W')
+      {
+        action.direction = Direction.SOUTHWEST;
+        System.out.println("ass");
+      }
+      if(map[ant.gridX - 1][ant.gridY + 1].getType() == 'W')
+      {
+        action.direction = Direction.WEST;
+        System.out.println("ass");
+      }
+      if(map[ant.gridX - 1][ant.gridY].getType() == 'W')
+      {
+        action.direction = Direction.NORTHWEST;
+        System.out.println("ass");
+      }
+      if(map[ant.gridX - 1][ant.gridY - 1].getType() == 'W')
+      {
+        action.direction = Direction.NORTH;
+        System.out.println("ass");
+      }
+      action.type = AntActionType.MOVE;
       return true;
     }
     return false;
@@ -529,7 +575,9 @@ public class ClientRandomWalk
   private boolean pickUpWater(AntData ant, AntAction action, CommData data)
   {
     if (DEBUG) System.out.println("  pickUpWater()");
-    
+
+    if(data.foodStockPile[0] > 5000) return false;
+
     int distance = manhattanDistance(ant.gridX, ant.gridY, waterX, waterY);
     
     if (distance < 45 && waterAnts.size() < 10)
@@ -672,8 +720,8 @@ public class ClientRandomWalk
     if (ant.ticksUntilNextAction > 0) return action;
     if (exitNest(ant, action, data)) return action;
     //if (data.gameTick < 150) return new AntAction(AntActionType.STASIS);
-    //if (unStickAnts(ant, action, data)) return action;
-    if (goHomeIfCarryingOrHurt(ant, action, data)) return action;
+    if (unStickAnts(ant, action, data)) return action;
+    //if (goHomeIfCarryingOrHurt(ant, action, data)) return action;
     //if (goToFood(ant, action, data)) return action;
     //if (pickUpWater(ant, action, data)) return action;
     //if (goToEnemyAnt(ant, action, data)) return action;

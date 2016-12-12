@@ -1,8 +1,6 @@
 package antworld.client;
 
-import antworld.common.AntAction;
 import antworld.common.AntData;
-import antworld.server.Ant;
 
 /**
  * Created by Anton on 12/11/2016.
