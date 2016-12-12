@@ -602,39 +602,42 @@ public class ClientRandomWalk
       {
         int distance = manhattanDistance(ant.gridX, ant.gridY, enemyAnt.gridX, enemyAnt.gridY);
 
-        for (AntHistory history : antHistories)
-        {
-          if (history.getAntID() == ant.id && distance > 40 && history.getEnemyAnt() != null)
-          {
-            System.out.println("********************** resetting ant id for " + ant.id);
-            history.setEnemyAnt(null);
-          }
-        }
-
         if(distance < 2)
         {
           return attackAdjacent(ant, action, enemyAnt);
         }
-        
-        for (AntHistory history : antHistories)
-        {
-          if(ant.id == history.getAntID())
-          {
-            if(history.getEnemyAnt() != null)
-            {
-              history.setEnemyAnt(enemyAnt);
 
-              System.out.println(ant.id + " going to enemy ant " + history.getEnemyAnt().id);
-              return goToward(ant, history.getEnemyAnt().gridX, history.getEnemyAnt().gridY, action);
-            }
-            
-            if(distance < 40 && history.getEnemyAnt() == null)
+        if(distance < 40)
+        {
+          for (AntHistory history : antHistories)
+          {
+            if (ant.id == history.getAntID())
             {
-              System.out.println(ant.id + " setting new enemy ant " + enemyAnt.id);
-              history.setEnemyAnt(enemyAnt);
+              if (history.getEnemyAnt() != null)
+              {
+                history.setEnemyAnt(enemyAnt);
+
+                System.out.println(ant.id + " going to enemy ant " + history.getEnemyAnt().id);
+                return goToward(ant, history.getEnemyAnt().gridX, history.getEnemyAnt().gridY, action);
+              }
+
+              if (distance < 40 && history.getEnemyAnt() == null)
+              {
+                System.out.println(ant.id + " setting new enemy ant " + enemyAnt.id);
+                history.setEnemyAnt(enemyAnt);
+              }
             }
           }
         }
+
+        //for (AntHistory history : antHistories)
+        //{
+        //  if (history.getAntID() == ant.id && distance > 40 && history.getEnemyAnt() != null)
+        //  {
+        //    System.out.println("********************** resetting ant id for " + ant.id);
+        //    history.setEnemyAnt(null);
+        //  }
+        //}
       }
     }
     return false;
