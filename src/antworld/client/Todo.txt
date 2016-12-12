@@ -1,7 +1,10 @@
 Ant World:
 -Action for different types of ants
-
--If it attacks us, attack it
+-If less ants than what we have attack them
+-only use half our food
+-if we find food send enough ants to get it all
+-improve ratio for sending ants out for exploring
+-A*
 
 Server Info:
 foodgame.cs.unm.edu

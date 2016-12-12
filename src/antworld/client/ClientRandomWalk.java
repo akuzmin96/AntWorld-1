@@ -729,55 +729,58 @@ public class ClientRandomWalk
 
     //System.out.println("antID: " + ant.id + " angle" + angle);
 
-    if(setPreviousTick && notReturning && distance >= explorationDistance)
+    if(ant.antType != AntType.SPEED)
     {
-      isTwisting = true;
-      previousTick = data.gameTick;
-      setPreviousTick = false;
-      lastExplorationDistance = explorationDistance;
-      lastExplorationTwistTick = explorationTwistTick;
-    }
-    else if(isTwisting)
-    {
-      //System.out.println("previousTick" + previousTick);
-      if(data.gameTick <= previousTick + explorationTwistTick)
+      if (setPreviousTick && notReturning && distance >= explorationDistance)
       {
-        if (!historyForExploring.contains(ant.id))
-        {
-          historyForExploring.add(ant.id);
-        }
-        goalX = intValue(100000 * cos(angle + Math.PI / 2));
-        goalY = intValue(100000 * sin(angle + Math.PI / 2));
+        isTwisting = true;
+        previousTick = data.gameTick;
+        setPreviousTick = false;
+        lastExplorationDistance = explorationDistance;
+        lastExplorationTwistTick = explorationTwistTick;
       }
-      else if (!notReturning && distance > 45)
+      else if (isTwisting)
       {
-        goalX = intValue(100000 * cos(angle + Math.PI)) + random.nextInt(200) - 100;
-        goalY = intValue(100000 * sin(angle + Math.PI)) + random.nextInt(200) - 100;
-      }
-      else
-      {
-
-        int i;
-
-        for(i = 0; i < historyForExploring.size() - 1; i++)
+        //System.out.println("previousTick" + previousTick);
+        if (data.gameTick <= previousTick + explorationTwistTick)
         {
-          if(historyForExploring.get(i) == ant.id)
+          if (!historyForExploring.contains(ant.id))
           {
-            historyForExploring.remove(i);
-            break;
+            historyForExploring.add(ant.id);
           }
+          goalX = intValue(100000 * cos(angle + Math.PI / 2));
+          goalY = intValue(100000 * sin(angle + Math.PI / 2));
         }
-
-        if(historyForExploring.size() < data.myAntList.size()/2)
+        else if (!notReturning && distance > 45)
         {
-          isTwisting = false;
-          setPreviousTick = true;
-          if (lastExplorationDistance == explorationDistance && lastExplorationTwistTick == explorationTwistTick)
+          goalX = intValue(100000 * cos(angle + Math.PI)) + random.nextInt(200) - 100;
+          goalY = intValue(100000 * sin(angle + Math.PI)) + random.nextInt(200) - 100;
+        }
+        else
+        {
+
+          int i;
+
+          for (i = 0; i < historyForExploring.size() - 1; i++)
           {
-            if(explorationDistance <= 800)
+            if (historyForExploring.get(i) == ant.id)
             {
-              explorationDistance += 100;
-              explorationTwistTick += 30;
+              historyForExploring.remove(i);
+              break;
+            }
+          }
+
+          if (historyForExploring.size() < data.myAntList.size() / 2)
+          {
+            isTwisting = false;
+            setPreviousTick = true;
+            if (lastExplorationDistance == explorationDistance && lastExplorationTwistTick == explorationTwistTick)
+            {
+              if (explorationDistance <= 800)
+              {
+                explorationDistance += 100;
+                explorationTwistTick += 30;
+              }
             }
           }
         }
