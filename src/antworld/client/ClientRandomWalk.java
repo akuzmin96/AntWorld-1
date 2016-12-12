@@ -255,9 +255,13 @@ public class ClientRandomWalk
       AntAction action = chooseAction(data, ant);
       ant.myAction = action;
     }
-    //Spawn attack ant
-    //AntData attackAnt = new AntData(-1, AntType.ATTACK, myNestName, myTeam);
-    //data.myAntList.add(attackAnt);
+    //Spawn ants
+    AntData attackAnt = new AntData(-1, AntType.ATTACK, myNestName, myTeam);
+    data.myAntList.add(attackAnt);
+    AntData speedAnt = new AntData(-1, AntType.SPEED, myNestName, myTeam);
+    data.myAntList.add(speedAnt);
+    AntData workerAnt = new AntData(-1, AntType.WORKER, myNestName, myTeam);
+    data.myAntList.add(workerAnt);
   }
   
   private int manhattanDistance(int x, int y, int xx, int yy)
@@ -532,13 +536,6 @@ public class ClientRandomWalk
         
         if(distance < 40)
         {
-          if(ant.carryType == FoodType.WATER)
-          {
-            action.type = AntActionType.DROP;
-            action.direction = Direction.NORTH;
-            action.quantity = ant.carryUnits;
-            return true;
-          }
           return goToward(ant, food.gridX, food.gridY, action);
         }
       }
@@ -624,44 +621,38 @@ public class ClientRandomWalk
     {
       for(AntData enemyAnt : data.enemyAntSet)
       {
-        int distance = manhattanDistance(ant.gridX, ant.gridY, enemyAnt.gridX, enemyAnt.gridY);
-
-        if(distance < 2)
+        if(enemyAnt.carryType != FoodType.WATER)
         {
-          return attackAdjacent(ant, action, enemyAnt);
-        }
-
-        if(distance < 40)
-        {
-          for (AntHistory history : antHistories)
+          int distance = manhattanDistance(ant.gridX, ant.gridY, enemyAnt.gridX, enemyAnt.gridY);
+  
+          if (distance < 2)
           {
-            if (ant.id == history.getAntID())
+            return attackAdjacent(ant, action, enemyAnt);
+          }
+  
+          if (distance < 40)
+          {
+            for (AntHistory history : antHistories)
             {
-              if (history.getEnemyAnt() != null)
+              if (ant.id == history.getAntID())
               {
-                history.setEnemyAnt(enemyAnt);
-
-                System.out.println(ant.id + " going to enemy ant " + history.getEnemyAnt().id);
-                return goToward(ant, history.getEnemyAnt().gridX, history.getEnemyAnt().gridY, action);
-              }
-
-              if (distance < 40 && history.getEnemyAnt() == null)
-              {
-                System.out.println(ant.id + " setting new enemy ant " + enemyAnt.id);
-                history.setEnemyAnt(enemyAnt);
+                if (history.getEnemyAnt() != null)
+                {
+                  history.setEnemyAnt(enemyAnt);
+          
+                  System.out.println(ant.id + " going to enemy ant " + history.getEnemyAnt().id);
+                  return goToward(ant, history.getEnemyAnt().gridX, history.getEnemyAnt().gridY, action);
+                }
+        
+                if (distance < 40 && history.getEnemyAnt() == null)
+                {
+                  System.out.println(ant.id + " setting new enemy ant " + enemyAnt.id);
+                  history.setEnemyAnt(enemyAnt);
+                }
               }
             }
           }
         }
-
-        //for (AntHistory history : antHistories)
-        //{
-        //  if (history.getAntID() == ant.id && distance > 40 && history.getEnemyAnt() != null)
-        //  {
-        //    System.out.println("********************** resetting ant id for " + ant.id);
-        //    history.setEnemyAnt(null);
-        //  }
-        //}
       }
     }
     return false;

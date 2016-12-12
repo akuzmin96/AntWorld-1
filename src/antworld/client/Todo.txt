@@ -2,8 +2,7 @@ Ant World:
 -Spawning new ant (have a priority)
 -Action for different types of ants
 
--If carrying water and food is in range, drop water
-
+-If it attacks us, attack it
 
 Server Info:
 foodgame.cs.unm.edu
