@@ -621,7 +621,7 @@ public class ClientRandomWalk
     {
       for(AntData enemyAnt : data.enemyAntSet)
       {
-        if(enemyAnt.carryType != FoodType.WATER)
+        if((enemyAnt.carryUnits > 0 && enemyAnt.carryType != FoodType.WATER) || enemyAnt.myAction.type == AntActionType.ATTACK)
         {
           int distance = manhattanDistance(ant.gridX, ant.gridY, enemyAnt.gridX, enemyAnt.gridY);
   
@@ -811,10 +811,10 @@ public class ClientRandomWalk
     if (goHomeIfCarryingOrHurt(ant, action, data)) return action;
     if (goToFood(ant, action, data)) return action;
     if (pickUpWater(ant, action, data)) return action;
-    //if (goToEnemyAnt(ant, action, data)) return action;
+    if (goToEnemyAnt(ant, action, data)) return action;
     //if (unStickOnWater(ant, action)) return action;
     if (goExplore(ant, action, data)) return action;
-    //if (goRandom(ant, action)) return action;
+    if (goRandom(ant, action)) return action;
     return action;
   }
 

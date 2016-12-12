@@ -1,5 +1,4 @@
 Ant World:
--Spawning new ant (have a priority)
 -Action for different types of ants
 
 -If it attacks us, attack it
