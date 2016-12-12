@@ -41,14 +41,18 @@ public class ClientRandomWalk
   private int waterY = -1;
   private double exitAngle = 0;
   private boolean firstExit = true;
-  private int explorationDistance = 200;
-  private int explorationTwistTick = 60;
+  private int explorationDistance = 150;
+  private int lastExplorationDistance = 0;
+  private int explorationTwistTick = 30;
+  private int lastExplorationTwistTick = 0;
+  private boolean setPreviousTick = true;
   private int previousTick = 0;
+  private boolean isTwisting = false;
   private int exitCountForInitial = 0;
   private Queue<location> exitQueue = new LinkedList<>();
   private ArrayList<AntData> waterAnts = new ArrayList<>();
   private ArrayList<AntHistory> antHistories = new ArrayList<>();
-  private ArrayList<AntHistory> historyForExploring = new ArrayList<>();
+  private ArrayList<Integer> historyForExploring = new ArrayList<>();
   
   private Socket clientSocket;
 
@@ -713,24 +717,72 @@ public class ClientRandomWalk
     int goalX = 0;
     int goalY = 0;
     int distance = manhattanDistance(centerX, centerY, ant.gridX, ant.gridY);
+    boolean notReturning = true;
+
+    if(historyForExploring.contains(ant.id)) notReturning = false;
 
     double angle = atan2(ant.gridY - centerY,ant.gridX - centerX);
 
-    //if(distance <= explorationDistance )
-    //{
+    if(distance <= explorationDistance && !isTwisting && notReturning)
+    {
       goalX = intValue(100000 * cos(angle));
       goalY = intValue(100000 * sin(angle));
-      previousTick = data.gameTick;
-    /*}
-    else if(data.gameTick <= previousTick + explorationTwistTick )
-    {
-      goalX = intValue(100000 * cos(angle + Math.PI/2));
-      goalY = intValue(100000 * sin(angle + Math.PI/2));
+      lastExplorationDistance = explorationDistance;
+      lastExplorationTwistTick = explorationTwistTick;
     }
     else
     {
-      return goToward(ant, goalX, goalY, action);
-    }*/
+      if(setPreviousTick)
+      {
+        isTwisting = true;
+        previousTick = data.gameTick;
+        setPreviousTick = false;
+      }
+    }
+
+    if(isTwisting)
+    {
+      System.out.println(previousTick);
+      if(data.gameTick <= previousTick + explorationTwistTick)
+      {
+        if (!historyForExploring.contains(ant.id))
+        {
+          historyForExploring.add(ant.id);
+        }
+        goalX = intValue(100000 * cos(angle + Math.PI / 2));
+        goalY = intValue(100000 * sin(angle + Math.PI / 2));
+      }
+      else if (!notReturning && distance > 45)
+      {
+        return goToward(ant, centerX, centerY, action);
+      }
+      else if (!notReturning && distance <= 45)
+      {
+
+        int i;
+
+        for(i = 0; i < historyForExploring.size(); i++)
+        {
+          if(historyForExploring.get(i) == ant.id)
+          {
+            break;
+          }
+        }
+
+        historyForExploring.remove(i);
+
+        if(historyForExploring.size() < 10)
+        {
+          isTwisting = false;
+          setPreviousTick = true;
+          if (lastExplorationDistance == explorationDistance && lastExplorationTwistTick == explorationTwistTick)
+          {
+            explorationDistance += 150;
+            explorationTwistTick += 30;
+          }
+        }
+      }
+    }
 
     return goToward(ant, goalX, goalY, action);
   }
