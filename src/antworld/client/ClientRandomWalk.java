@@ -13,6 +13,7 @@ import java.util.Random;
 import antworld.common.*;
 import antworld.common.AntAction.AntActionType;
 
+import static java.lang.Integer.toBinaryString;
 import static java.lang.Math.*;
 import static oracle.jrockit.jfr.events.Bits.intValue;
 
@@ -340,52 +341,6 @@ public class ClientRandomWalk
       action.direction = dir;
       return true;
     }
-
-    /*if(!waterAnts.contains(ant))// && !waterAnts.isEmpty())
-    {
-      if(map[ant.gridX][ant.gridY - 1].getType() == 'W')
-      {
-        action.direction = Direction.NORTHEAST;
-        System.out.println("ass");
-      }
-      if(map[ant.gridX + 1][ant.gridY - 1].getType() == 'W')
-      {
-        action.direction = Direction.EAST;
-        System.out.println("ass");
-      }
-      if(map[ant.gridX + 1][ant.gridY].getType() == 'W')
-      {
-        action.direction = Direction.SOUTHEAST;
-        System.out.println("ass");
-      }
-      if(map[ant.gridX + 1][ant.gridY + 1].getType() == 'W')
-      {
-        action.direction = Direction.SOUTH;
-        System.out.println("ass");
-      }
-      if(map[ant.gridX][ant.gridY + 1].getType() == 'W')
-      {
-        action.direction = Direction.SOUTHWEST;
-        System.out.println("ass");
-      }
-      if(map[ant.gridX - 1][ant.gridY + 1].getType() == 'W')
-      {
-        action.direction = Direction.WEST;
-        System.out.println("ass");
-      }
-      if(map[ant.gridX - 1][ant.gridY].getType() == 'W')
-      {
-        action.direction = Direction.NORTHWEST;
-        System.out.println("ass");
-      }
-      if(map[ant.gridX - 1][ant.gridY - 1].getType() == 'W')
-      {
-        action.direction = Direction.NORTH;
-        System.out.println("ass");
-      }
-      action.type = AntActionType.MOVE;
-      return true;
-    }*/
     return false;
   }
   
@@ -711,7 +666,64 @@ public class ClientRandomWalk
     }
     return false;
   }
-
+  
+  private boolean unStickOnWater(AntData ant, AntAction action)
+  {
+    if(!waterAnts.contains(ant))
+    {
+      for(int x = ant.gridX - 1; x < ant.gridX + 2; x++)
+      {
+        for(int y = ant.gridY - 1; y < ant.gridY + 2; y++)
+        {
+          if(map[x][y].getType() == 'W')
+          {
+            int dirBits = getDirectionBitsOpen(ant);
+            String bits = toBinaryString(dirBits);
+            int direction = -1;
+            int length = bits.length();
+            
+            if(length < 8 || bits.charAt(length - 1) == '0')
+            {
+              for(int i = length - 1; i > -1; i--)
+              {
+                if(bits.charAt(i) == '1')
+                {
+                  direction = i + (8 - length);
+                  break;
+                }
+              }
+            }
+            
+            if(direction == -1)
+            {
+              for (int i = 0; i < 8; i++)
+              {
+                if (bits.charAt(i) == '0')
+                {
+                  direction = i - 1;
+                  break;
+                }
+              }
+            }
+            
+            if(direction == 0) action.direction = Direction.NORTHWEST;
+            if(direction == 1) action.direction = Direction.WEST;
+            if(direction == 2) action.direction = Direction.SOUTHWEST;
+            if(direction == 3) action.direction = Direction.SOUTH;
+            if(direction == 4) action.direction = Direction.SOUTHEAST;
+            if(direction == 5) action.direction = Direction.EAST;
+            if(direction == 6) action.direction = Direction.NORTHEAST;
+            if(direction == 7) action.direction = Direction.NORTH;
+            
+            action.type = AntActionType.MOVE;
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+  
   private boolean goExplore(AntData ant, AntAction action, CommData data)
   {
 
@@ -719,7 +731,12 @@ public class ClientRandomWalk
     boolean notReturning = true;
 
     if(historyForExploring.contains(ant.id)) notReturning = false;
-
+  
+    if(notReturning && unStickOnWater(ant, action))
+    {
+      return true;
+    }
+    
     double angle = atan2(ant.gridY - centerY,ant.gridX - centerX);
 
     int goalX = intValue(100000 * cos(angle));
@@ -805,6 +822,7 @@ public class ClientRandomWalk
     //if (goToFood(ant, action, data)) return action;
     //if (pickUpWater(ant, action, data)) return action;
     //if (goToEnemyAnt(ant, action, data)) return action;
+    //if (unStickOnWater(ant, action)) return action;
     if (goExplore(ant, action, data)) return action;
     //if (goRandom(ant, action)) return action;
     return action;
