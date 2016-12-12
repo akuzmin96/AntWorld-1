@@ -86,7 +86,7 @@ public enum AntType
    * @return the probability that each ant takes 1 point of damage each time step it spends
    * outside the nest.
    */
-  public double getAttritionDamageProbability() {return 0.0002;}
+  public double getAttritionDamageProbability() {return 0.07;}
   public int getBaseMovementTicksPerCell() {return 1;}
   public int getUpHillMultiplier() {return 5;}
   public int getHalfEncumbranceMultiplier() {return 2;}

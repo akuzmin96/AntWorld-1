@@ -433,8 +433,10 @@ public class ClientRandomWalk
       }
       return true;
     }
-    
-    if(ant.gridX < centerX + 10 && ant.gridX > centerX - 10 && ant.gridY < centerY + 10 && ant.gridY > centerY - 10)
+
+    int distance = manhattanDistance(ant.gridX, ant.gridY, centerX, centerY);
+
+    if(distance < 21)
     {
       action.type = AntActionType.ENTER_NEST;
       System.out.println("Entered nest");
@@ -671,10 +673,10 @@ public class ClientRandomWalk
     if (exitNest(ant, action, data)) return action;
     //if (data.gameTick < 150) return new AntAction(AntActionType.STASIS);
     //if (unStickAnts(ant, action, data)) return action;
-    //if (goHomeIfCarryingOrHurt(ant, action, data)) return action;
+    if (goHomeIfCarryingOrHurt(ant, action, data)) return action;
     //if (goToFood(ant, action, data)) return action;
     //if (pickUpWater(ant, action, data)) return action;
-    if (goToEnemyAnt(ant, action, data)) return action;
+    //if (goToEnemyAnt(ant, action, data)) return action;
     if (goExplore(ant, action)) return action;
     if (goRandom(ant, action)) return action;
     return action;
