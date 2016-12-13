@@ -5,10 +5,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.Random;
+import java.util.*;
 
 import antworld.common.*;
 import antworld.common.AntAction.AntActionType;
@@ -41,6 +38,7 @@ public class JoshAntonAntAI
 
   private World world = new World();
   private Pixel[][] map = world.getWorld();
+  private AStarPath AStar = new AStarPath(map);
   private static final int DIR_BIT_N  = 1;
   private static final int DIR_BIT_NE = 2;
   private static final int DIR_BIT_E  = 4;
@@ -61,10 +59,12 @@ public class JoshAntonAntAI
   private int previousTick = 0;
   private boolean isTwisting = false;
   private int exitCountForInitial = 0;
+  private int antsExploring = 0;
   private Queue<Location> exitQueue = new LinkedList<>();
   private ArrayList<AntData> waterAnts = new ArrayList<>();
   private ArrayList<AntHistory> antHistories = new ArrayList<>();
   private ArrayList<Integer> historyForExploring = new ArrayList<>();
+  private LinkedHashMap<Integer, List<Pixel>> listOfPaths = new LinkedHashMap<>();
   
   private Socket clientSocket;
   private static Random random = Constants.random;
@@ -504,6 +504,15 @@ public class JoshAntonAntAI
    */
   private boolean goHome(AntData ant, AntAction action, int homeAction, CommData data)
   {
+
+    Pixel fromAStar;
+
+    if((!listOfPaths.containsKey(ant.id) || listOfPaths.get(ant.id) == null) && ant.carryType != FoodType.WATER)
+    {
+      listOfPaths.put(ant.id, AStar.findAndReturnPath(map[ant.gridX][ant.gridY], map[centerX][centerY]));
+      System.out.println(ant.gridX + " : " + ant.gridY);
+    }
+
     if (homeAction == 1 && ant.underground)
     {
       action.type = AntActionType.HEAL;
@@ -533,10 +542,75 @@ public class JoshAntonAntAI
     if (distance < 21)
     {
       exitQueue.add(new Location(ant.gridX, ant.gridY));
+      if(ant.carryType != FoodType.WATER)
+      {
+        listOfPaths.remove(ant.id);
+      }
       action.type = AntActionType.ENTER_NEST;
       if (DEBUG) System.out.println("Entered nest");
       return true;
     }
+
+    if(ant.carryType != FoodType.WATER && listOfPaths.get(ant.id) != null)
+    {
+      int cX = ant.gridX;
+      int cY = ant.gridY;
+      fromAStar = listOfPaths.get(ant.id).get(0);
+      int nX = fromAStar.getX();
+      int nY = fromAStar.getY();
+
+      if(cX == nX && cY == nY)
+      {
+        listOfPaths.get(ant.id).remove(0);
+        fromAStar = listOfPaths.get(ant.id).get(0);
+        nX = fromAStar.getX();
+        nY = fromAStar.getY();
+      }
+
+
+      action.type = AntActionType.MOVE;
+      if( cX == nX && cY - 1 == nY )
+      {
+        action.direction = Direction.NORTH;
+      }
+      else if( cX + 1 == nX && cY - 1 == nY )
+      {
+        action.direction = Direction.NORTHEAST;
+      }
+      else if( cX + 1 == nX && cY == nY )
+      {
+        action.direction = Direction.EAST;
+      }
+      else if( cX + 1 == nX && cY + 1 == nY )
+      {
+        action.direction = Direction.SOUTHEAST;
+      }
+      else if( cX == nX && cY + 1 == nY )
+      {
+        action.direction = Direction.SOUTH;
+      }
+      else if( cX - 1 == nX && cY + 1 == nY )
+      {
+        action.direction = Direction.SOUTHWEST;
+      }
+      else if( cX - 1 == nX && cY == nY )
+      {
+        action.direction = Direction.WEST;
+      }
+      else if( cX - 1 == nX && cY - 1 == nY )
+      {
+        action.direction = Direction.NORTHWEST;
+      }
+      else
+      {
+        System.out.println("problem");
+        listOfPaths.remove(ant.id);
+        listOfPaths.put(ant.id, AStar.findAndReturnPath(map[ant.gridX][ant.gridY], map[centerX][centerY]));
+      }
+
+      return true;
+    }
+
     return goToward(ant, centerX, centerY, action);
   }
   
@@ -553,7 +627,7 @@ public class JoshAntonAntAI
     {
       return goHome(ant, action, 1, data);
     }
-    else if (ant.carryUnits > 10 && ant.carryType != FoodType.WATER)
+    else if (ant.carryUnits >= 10 && ant.carryType != FoodType.WATER)
     {
       return goHome(ant, action, 2, data);
     }

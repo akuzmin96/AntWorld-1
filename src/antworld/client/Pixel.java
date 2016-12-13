@@ -9,6 +9,7 @@ public class Pixel
 {
   private int x, y, height;
   private char type;
+  private int priority = 0;
   
   public Pixel(int x, int y, char type, int height)
   {
@@ -56,4 +57,16 @@ public class Pixel
   {
     return height;
   }
+
+  /**
+   * Sets the priority of the pixel for a star
+   * @param priority
+   */
+  public void setPriority(int priority) { this.priority = priority; }
+
+  /**
+   * Gets the priority of the pixel for a star
+   * @return priority
+   */
+  public int getPriority() { return priority; }
 }
