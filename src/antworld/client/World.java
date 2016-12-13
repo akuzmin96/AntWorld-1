@@ -19,7 +19,7 @@ public class World
   {
     try
     {
-      map = ImageIO.read(getClass().getResourceAsStream("Small.png"));
+      map = ImageIO.read(getClass().getResourceAsStream("AntWorld.png"));
       width = map.getWidth();
       height = map.getHeight();
     }

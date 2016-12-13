@@ -253,6 +253,7 @@ public class JoshAntonAntAI
       e.printStackTrace();
       System.exit(0);
     }
+
     return true;
   }
 
@@ -280,6 +281,8 @@ public class JoshAntonAntAI
       AntData workerAnt = new AntData(-1, AntType.WORKER, myNestName, myTeam);
       data.myAntList.add(workerAnt);
     }
+
+    antsExploring = 0;
   }
   
   /**
@@ -495,7 +498,8 @@ public class JoshAntonAntAI
   }
   
   /**
-   * Go home if the ant needs to heal of drop off food
+   * Go home if the ant needs to heal of drop off food, will use A star to calculate the path if the ant needs
+   * to be healed or has food that is not water.
    * @param ant current ant
    * @param action action of ant
    * @param homeAction what to do, heal or drop off
@@ -510,7 +514,6 @@ public class JoshAntonAntAI
     if((!listOfPaths.containsKey(ant.id) || listOfPaths.get(ant.id) == null) && ant.carryType != FoodType.WATER)
     {
       listOfPaths.put(ant.id, AStar.findAndReturnPath(map[ant.gridX][ant.gridY], map[centerX][centerY]));
-      System.out.println(ant.gridX + " : " + ant.gridY);
     }
 
     if (homeAction == 1 && ant.underground)
@@ -960,6 +963,7 @@ public class JoshAntonAntAI
 
     int goalX = intValue(100000 * cos(angle)) + random.nextInt(400) - 200;
     int goalY = intValue(100000 * sin(angle)) + random.nextInt(400) - 200;
+    antsExploring++;
 
     if (DEBUG) System.out.println("antID: " + ant.id + " angle" + angle);
 
@@ -975,6 +979,7 @@ public class JoshAntonAntAI
       }
       else if (isTwisting)
       {
+
         if (DEBUG) System.out.println("previousTick" + previousTick);
         if (data.gameTick <= previousTick + explorationTwistTick)
         {
@@ -1002,13 +1007,13 @@ public class JoshAntonAntAI
             }
           }
 
-          if (historyForExploring.size() < data.myAntList.size() / 2)
+          if (historyForExploring.size() < antsExploring / 2)
           {
             isTwisting = false;
             setPreviousTick = true;
             if (lastExplorationDistance == explorationDistance && lastExplorationTwistTick == explorationTwistTick)
             {
-              if (explorationDistance <= 800)
+              if (explorationDistance <= 1000)
               {
                 explorationDistance += 100;
                 explorationTwistTick += 30;
