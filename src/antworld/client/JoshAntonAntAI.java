@@ -606,7 +606,6 @@ public class JoshAntonAntAI
       }
       else
       {
-        System.out.println("problem");
         listOfPaths.remove(ant.id);
         listOfPaths.put(ant.id, AStar.findAndReturnPath(map[ant.gridX][ant.gridY], map[centerX][centerY]));
       }
