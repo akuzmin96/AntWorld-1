@@ -374,6 +374,11 @@ public class JoshAntonAntAI
       }
     }
     
+    if(neighborCounter <= 2 && !data.foodSet.isEmpty())
+    {
+      neighborCounter++;
+    }
+    
     if (neighborCounter > 2)
     {
       int dirBits = getDirectionBitsOpen(ant);

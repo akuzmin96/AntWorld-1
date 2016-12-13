@@ -63,7 +63,16 @@ public class AStarPath {
           Pixel next = map[i][j];
           if (i != j && next.getType() != 'W')
           {
-            int new_cost = cost_So_Far.get(current) + next.getHeight();
+            int heightDifference = 0;
+            if(current.getHeight() < next.getHeight())
+            {
+              heightDifference = 1;
+            }
+            if(current.getHeight() >= next.getHeight())
+            {
+              heightDifference = 0;
+            }
+            int new_cost = cost_So_Far.get(current) + heightDifference;
             if (!cost_So_Far.containsKey(next) || new_cost < cost_So_Far.get(next))
             {
               cost_So_Far.put(next, new_cost);
