@@ -508,7 +508,6 @@ public class JoshAntonAntAI
    */
   private boolean goHome(AntData ant, AntAction action, int homeAction, CommData data)
   {
-
     Pixel fromAStar;
 
     if((!listOfPaths.containsKey(ant.id) || listOfPaths.get(ant.id) == null) && ant.carryType != FoodType.WATER)
@@ -562,7 +561,7 @@ public class JoshAntonAntAI
       int nX = fromAStar.getX();
       int nY = fromAStar.getY();
 
-      if(cX == nX && cY == nY)
+      if (cX == nX && cY == nY)
       {
         listOfPaths.get(ant.id).remove(0);
         fromAStar = listOfPaths.get(ant.id).get(0);
@@ -570,37 +569,36 @@ public class JoshAntonAntAI
         nY = fromAStar.getY();
       }
 
-
       action.type = AntActionType.MOVE;
-      if( cX == nX && cY - 1 == nY )
+      if (cX == nX && cY - 1 == nY)
       {
         action.direction = Direction.NORTH;
       }
-      else if( cX + 1 == nX && cY - 1 == nY )
+      else if (cX + 1 == nX && cY - 1 == nY)
       {
         action.direction = Direction.NORTHEAST;
       }
-      else if( cX + 1 == nX && cY == nY )
+      else if (cX + 1 == nX && cY == nY)
       {
         action.direction = Direction.EAST;
       }
-      else if( cX + 1 == nX && cY + 1 == nY )
+      else if (cX + 1 == nX && cY + 1 == nY)
       {
         action.direction = Direction.SOUTHEAST;
       }
-      else if( cX == nX && cY + 1 == nY )
+      else if (cX == nX && cY + 1 == nY)
       {
         action.direction = Direction.SOUTH;
       }
-      else if( cX - 1 == nX && cY + 1 == nY )
+      else if (cX - 1 == nX && cY + 1 == nY)
       {
         action.direction = Direction.SOUTHWEST;
       }
-      else if( cX - 1 == nX && cY == nY )
+      else if (cX - 1 == nX && cY == nY)
       {
         action.direction = Direction.WEST;
       }
-      else if( cX - 1 == nX && cY - 1 == nY )
+      else if (cX - 1 == nX && cY - 1 == nY)
       {
         action.direction = Direction.NORTHWEST;
       }
@@ -609,7 +607,6 @@ public class JoshAntonAntAI
         listOfPaths.remove(ant.id);
         listOfPaths.put(ant.id, AStar.findAndReturnPath(map[ant.gridX][ant.gridY], map[centerX][centerY]));
       }
-
       return true;
     }
 
@@ -837,7 +834,8 @@ public class JoshAntonAntAI
           if (DEBUG) System.out.println("Outnumber");
         }
         
-        if (friendlyCounter + 5 < enemyCounter)
+        if (friendlyCounter + 5 < enemyCounter &&
+                manhattanDistance(ant.gridX, ant.gridY, enemyAnt.gridX, enemyAnt.gridY) < 35)
         {
           return goToward(ant, centerX, centerY, action);
         }

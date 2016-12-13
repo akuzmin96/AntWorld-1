@@ -9,6 +9,8 @@ import java.util.PriorityQueue;
 /**
  * This class is designed to calculate the a star path for a specific ant. It is mainly used for ants
  * that have food and or ants that are healing to reduce computation.
+ *
+ * @author Joshua Donckels
  */
 public class AStarPath {
 
@@ -27,7 +29,7 @@ public class AStarPath {
    * Will find and return the shortest path from pixel start to finish using the input map.
    * @param start starting pixel
    * @param end ending pixel
-   * @return list of pixel represeting the path to follow.
+   * @return list of pixel representing the path to follow.
    */
   protected List<Pixel> findAndReturnPath(Pixel start, Pixel end)
   {
@@ -39,6 +41,7 @@ public class AStarPath {
       }
     };
     PriorityQueue<Pixel> frontier = new PriorityQueue<>(1, pixelComparator);
+    start.setPriority(0);
     frontier.add(start);
     LinkedHashMap<Pixel, Pixel> came_From = new LinkedHashMap<>();
     LinkedHashMap<Pixel, Integer> cost_So_Far = new LinkedHashMap<>();
@@ -53,12 +56,12 @@ public class AStarPath {
         lastVisitedNode = current;
         break;
       }
-      for(int i = current.getX() - 1; i <= current.getX() + 1; i++)
+      for (int i = current.getX() - 1; i <= current.getX() + 1; i++)
       {
-        for(int j = current.getY() - 1; j <= current.getY() + 1; j++)
+        for (int j = current.getY() - 1; j <= current.getY() + 1; j++)
         {
           Pixel next = map[i][j];
-          if(i != j && next.getType() != 'W')
+          if (i != j && next.getType() != 'W')
           {
             int new_cost = cost_So_Far.get(current) + next.getHeight();
             if (!cost_So_Far.containsKey(next) || new_cost < cost_So_Far.get(next))
@@ -86,10 +89,9 @@ public class AStarPath {
       path.add(0, currentToReturn);
       currentToReturn = came_From.get(currentToReturn);
     }
-
+    
     return path;
-
-}
+  }
 
   /**
    * Finds the manhattan distance from the starting x and y to ending xx and yy
@@ -103,5 +105,4 @@ public class AStarPath {
   {
     return Math.abs(x - xx) + Math.abs(y - yy);
   }
-
 }
