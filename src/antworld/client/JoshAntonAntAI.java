@@ -17,11 +17,22 @@ import static java.lang.Integer.toBinaryString;
 import static java.lang.Math.*;
 import static oracle.jrockit.jfr.events.Bits.intValue;
 
-public class ClientRandomWalk
+/**
+ * The brain of our ant AI.
+ * Exploring in pulses: Ants go out, rotate, and the come back (ensures that they cover everything around the base)
+ * Attacking: Ants attack if they outnumber an enemy ant, if the enemy ant is carrying food, or if the enemy attacked
+ * Water: There are 10 ants that gather water until the water supply is 5000 units
+ * Food: As soon as an ant sees food, other ants come to help gather all of it and return to the base
+ * Healing: Ant goes back to base if it is hurt
+ * Getting stuck: Ants get unstuck if they are clumped or if they hit water
+ *
+ * @author Anton Kuzmin and Joshua Donckels
+ */
+public class JoshAntonAntAI
 {
   private static final boolean DEBUG = false;
   private static final TeamNameEnum myTeam = TeamNameEnum.Josh_Anton;
-  private static final long password = 962740848319L;//Each team has been assigned a random password.
+  private static final long password = 962740848319L; //Each team has been assigned a random password.
   private ObjectInputStream inputStream = null;
   private ObjectOutputStream outputStream = null;
   private boolean isConnected = false;
@@ -50,21 +61,17 @@ public class ClientRandomWalk
   private int previousTick = 0;
   private boolean isTwisting = false;
   private int exitCountForInitial = 0;
-  private Queue<location> exitQueue = new LinkedList<>();
+  private Queue<Location> exitQueue = new LinkedList<>();
   private ArrayList<AntData> waterAnts = new ArrayList<>();
   private ArrayList<AntHistory> antHistories = new ArrayList<>();
   private ArrayList<Integer> historyForExploring = new ArrayList<>();
   
   private Socket clientSocket;
-
-  //A random number generator is created in Constants. Use it.
-  //Do not create a new generator every time you want a random number nor
-  //  even in every class were you want a generator.
   private static Random random = Constants.random;
 
-  public ClientRandomWalk(String host, int portNumber)
+  public JoshAntonAntAI(String host, int portNumber)
   {
-    System.out.println("Starting ClientRandomWalk: " + System.currentTimeMillis());
+    System.out.println("Starting JoshAntonAntAI: " + System.currentTimeMillis());
     isConnected = false;
     while (!isConnected)
     {
@@ -76,6 +83,7 @@ public class ClientRandomWalk
     closeAll();
   }
 
+  
   private boolean openConnection(String host, int portNumber)
   {
     try
@@ -84,13 +92,13 @@ public class ClientRandomWalk
     }
     catch (UnknownHostException e)
     {
-      System.err.println("ClientRandomWalk Error: Unknown Host " + host);
+      System.err.println("JoshAntonAntAI Error: Unknown Host " + host);
       e.printStackTrace();
       return false;
     }
     catch (IOException e)
     {
-      System.err.println("ClientRandomWalk Error: Could not open connection to " + host + " on port " + portNumber);
+      System.err.println("JoshAntonAntAI Error: Could not open connection to " + host + " on port " + portNumber);
       e.printStackTrace();
       return false;
     }
@@ -103,7 +111,7 @@ public class ClientRandomWalk
     }
     catch (IOException e)
     {
-      System.err.println("ClientRandomWalk Error: Could not open i/o streams");
+      System.err.println("JoshAntonAntAI Error: Could not open i/o streams");
       e.printStackTrace();
       return false;
     }
@@ -112,7 +120,7 @@ public class ClientRandomWalk
 
   public void closeAll()
   {
-    System.out.println("ClientRandomWalk.closeAll()");
+    System.out.println("JoshAntonAntAI.closeAll()");
     {
       try
       {
@@ -122,7 +130,7 @@ public class ClientRandomWalk
       }
       catch (IOException e)
       {
-        System.err.println("ClientRandomWalk Error: Could not close");
+        System.err.println("JoshAntonAntAI Error: Could not close");
         e.printStackTrace();
       }
     }
@@ -142,47 +150,48 @@ public class ClientRandomWalk
       {
         try
         {
-          if (DEBUG) System.out.println("ClientRandomWalk: listening to socket....");
+          if (DEBUG) System.out.println("JoshAntonAntAI: listening to socket....");
           data = (CommData) inputStream.readObject();
-          if (DEBUG) System.out.println("ClientRandomWalk: received <<<<<<<<<"+inputStream.available()+"<...\n" + data);
+          if (DEBUG) System.out.println("JoshAntonAntAI: received <<<<<<<<<"+inputStream.available()+"<...\n" + data);
           
           if (data.errorMsg != null)
           {
-            System.err.println("ClientRandomWalk***ERROR***: " + data.errorMsg);
+            System.err.println("JoshAntonAntAI***ERROR***: " + data.errorMsg);
             System.exit(0);
           }
         }
         catch (IOException e)
         {
-          System.err.println("ClientRandomWalk***ERROR***: client read failed");
+          System.err.println("JoshAntonAntAI***ERROR***: client read failed");
           e.printStackTrace();
           System.exit(0);
         }
         catch (ClassNotFoundException e)
         {
-          System.err.println("ClientRandomWalk***ERROR***: client sent incorrect common format");
+          System.err.println("JoshAntonAntAI***ERROR***: client sent incorrect common format");
         }
       }
     if (data.myTeam != myTeam)
     {
-      System.err.println("ClientRandomWalk***ERROR***: Server returned wrong team name: "+data.myTeam);
+      System.err.println("JoshAntonAntAI***ERROR***: Server returned wrong team name: "+data.myTeam);
       System.exit(0);
     }
     if (data.myNest == null)
     {
-      System.err.println("ClientRandomWalk***ERROR***: Server returned NULL nest");
+      System.err.println("JoshAntonAntAI***ERROR***: Server returned NULL nest");
       System.exit(0);
     }
 
     myNestName = data.myNest;
     centerX = data.nestData[myNestName.ordinal()].centerX;
     centerY = data.nestData[myNestName.ordinal()].centerY;
-    System.out.println("ClientRandomWalk: ==== Nest Assigned ===>: " + myNestName);
+    System.out.println("JoshAntonAntAI: ==== Nest Assigned ===>: " + myNestName);
     return data;
   }
     
   public void mainGameLoop(CommData data)
   {
+    //Set up the history objects for each ant
     for(AntData ant : data.myAntList)
     {
       antHistories.add(new AntHistory(ant.id));
@@ -192,30 +201,30 @@ public class ClientRandomWalk
     { 
       try
       {
-        if (DEBUG) System.out.println("ClientRandomWalk: chooseActions: " + myNestName);
+        if (DEBUG) System.out.println("JoshAntonAntAI: chooseActions: " + myNestName);
 
         chooseActionsOfAllAnts(data);  
 
         CommData sendData = data.packageForSendToServer();
         
-        System.out.println("ClientRandomWalk: Sending>>>>>>>: " + sendData);
+        if (DEBUG) System.out.println("JoshAntonAntAI: Sending>>>>>>>: " + sendData);
         outputStream.writeObject(sendData);
         outputStream.flush();
         outputStream.reset();
         
-        if (DEBUG) System.out.println("ClientRandomWalk: listening to socket....");
+        if (DEBUG) System.out.println("JoshAntonAntAI: listening to socket....");
         CommData receivedData = (CommData) inputStream.readObject();
-        if (DEBUG) System.out.println("ClientRandomWalk: received <<<<<<<<<"+inputStream.available()+"<...\n" + receivedData);
+        if (DEBUG) System.out.println("JoshAntonAntAI: received <<<<<<<<<"+inputStream.available()+"<...\n" + receivedData);
         data = receivedData;
         
         if ((myNestName == null) || (data.myTeam != myTeam))
         {
-          System.err.println("ClientRandomWalk: !!!!ERROR!!!! " + myNestName);
+          System.err.println("JoshAntonAntAI: !!!!ERROR!!!! " + myNestName);
         }
       }
       catch (IOException e)
       {
-        System.err.println("ClientRandomWalk***ERROR***: client read failed");
+        System.err.println("JoshAntonAntAI***ERROR***: client read failed");
         e.printStackTrace();
         System.exit(0);
       }
@@ -228,20 +237,19 @@ public class ClientRandomWalk
     }
   }
   
-  
   private boolean sendCommData(CommData data)
   {
     CommData sendData = data.packageForSendToServer();
     try
     {
-      if (DEBUG) System.out.println("ClientRandomWalk.sendCommData(" + sendData +")");
+      if (DEBUG) System.out.println("JoshAntonAntAI.sendCommData(" + sendData +")");
       outputStream.writeObject(sendData);
       outputStream.flush();
       outputStream.reset();
     }
     catch (IOException e)
     {
-      System.err.println("ClientRandomWalk***ERROR***: client read failed");
+      System.err.println("JoshAntonAntAI***ERROR***: client read failed");
       e.printStackTrace();
       System.exit(0);
     }
@@ -255,25 +263,45 @@ public class ClientRandomWalk
       AntAction action = chooseAction(data, ant);
       ant.myAction = action;
     }
-    //Spawn ants
-    AntData attackAnt = new AntData(-1, AntType.ATTACK, myNestName, myTeam);
-    data.myAntList.add(attackAnt);
-    AntData speedAnt = new AntData(-1, AntType.SPEED, myNestName, myTeam);
-    data.myAntList.add(speedAnt);
-    AntData workerAnt = new AntData(-1, AntType.WORKER, myNestName, myTeam);
-    data.myAntList.add(workerAnt);
+    
+    //Spawn ants [Water, Nectar, Seeds, Meet] when there is enough food
+    if(data.foodStockPile[3] > 20)
+    {
+      AntData attackAnt = new AntData(-1, AntType.ATTACK, myNestName, myTeam);
+      data.myAntList.add(attackAnt);
+    }
+    if(data.foodStockPile[1] > 20)
+    {
+      AntData speedAnt = new AntData(-1, AntType.SPEED, myNestName, myTeam);
+      data.myAntList.add(speedAnt);
+    }
+    if(data.foodStockPile[2] > 20)
+    {
+      AntData workerAnt = new AntData(-1, AntType.WORKER, myNestName, myTeam);
+      data.myAntList.add(workerAnt);
+    }
   }
   
+  /**
+   * Get the Manhattan distance between two points
+   * @param x position 1
+   * @param y position 1
+   * @param xx position 2
+   * @param yy position 2
+   * @return distance
+   */
   private int manhattanDistance(int x, int y, int xx, int yy)
   {
     return Math.abs(x - xx) + Math.abs(y - yy);
   }
   
-  //=============================================================================
-  // This method sets the given action to EXIT_NEST if and only if the given
-  //   ant is underground.
-  // Returns true if an action was set. Otherwise returns false
-  //=============================================================================
+  /**
+   * Exit the nest with the position being based on a circle for better exploration
+   * @param ant current ant
+   * @param action action of ant
+   * @param data comm data
+   * @return exit nest
+   */
   private boolean exitNest(AntData ant, AntAction action, CommData data)
   {
     if (ant.underground == false) return false;
@@ -282,19 +310,19 @@ public class ClientRandomWalk
 
     action.type = AntActionType.EXIT_NEST;
 
-    if(firstExit)
+    if (firstExit)
     {
       double exitIncrement = 6 * Math.PI/data.myAntList.size();
 
-      if(exitCountForInitial >= data.myAntList.size()) firstExit = false;
+      if (exitCountForInitial >= data.myAntList.size()) firstExit = false;
 
-      if(exitAngle < 2 * Math.PI)
+      if (exitAngle < 2 * Math.PI)
       {
         action.x = centerX + intValue(15 * cos(exitAngle));
         action.y = centerY + intValue(15 * sin(exitAngle));
         exitAngle += exitIncrement;
       }
-      else if(exitAngle < 4 * Math.PI)
+      else if (exitAngle < 4 * Math.PI)
       {
         action.x = centerX + intValue(10 * cos(exitAngle));
         action.y = centerY + intValue(10 * sin(exitAngle));
@@ -310,9 +338,9 @@ public class ClientRandomWalk
     }
     else
     {
-      if(!exitQueue.isEmpty())
+      if (!exitQueue.isEmpty())
       {
-        location loc = exitQueue.remove();
+        Location loc = exitQueue.remove();
         action.x = loc.getX();
         action.y = loc.getY();
       }
@@ -322,22 +350,28 @@ public class ClientRandomWalk
         action.y = centerY - (Constants.NEST_RADIUS - 1) + random.nextInt(2 * (Constants.NEST_RADIUS - 1));
       }
     }
-
     return true;
   }
-
+  
+  /**
+   * If ants are clumped up, make them go in different directions
+   * @param ant current ant
+   * @param action action of ant
+   * @param data comm data
+   * @return move in a random open direction
+   */
   private boolean unStickAnts(AntData ant, AntAction action, CommData data)
   {
     int neighborCounter = 0;
-    for(AntData neighborAnt : data.myAntList)
+    for (AntData neighborAnt : data.myAntList)
     {
-      if(manhattanDistance(ant.gridX, ant.gridY, neighborAnt.gridX, neighborAnt.gridY) < 2 && data.gameTick > 200)
+      if (manhattanDistance(ant.gridX, ant.gridY, neighborAnt.gridX, neighborAnt.gridY) < 2 && data.gameTick > 200)
       {
         neighborCounter++;
       }
     }
     
-    if(neighborCounter > 2)
+    if (neighborCounter > 2)
     {
       int dirBits = getDirectionBitsOpen(ant);
       Direction dir = getRandomDirection(dirBits);
@@ -348,6 +382,14 @@ public class ClientRandomWalk
     return false;
   }
   
+  /**
+   * Go toward a certain spot on the map
+   * @param ant current ant
+   * @param x position to go to
+   * @param y position to go to
+   * @param action action of ant
+   * @return move to the x and y position
+   */
   private boolean goToward(AntData ant, int x, int y, AntAction action)
   {
     int dirBits = getDirectionBitsOpen(ant);
@@ -360,6 +402,11 @@ public class ClientRandomWalk
     return true;
   }
   
+  /**
+   * Get a random direction to move to
+   * @param dirBits bits that are open
+   * @return direction
+   */
   private static Direction getRandomDirection(int dirBits)
   {
     Direction dir = Direction.getRandomDir();
@@ -373,6 +420,11 @@ public class ClientRandomWalk
     return null;
   }
   
+  /**
+   * Get the directional bits that are open for the ant to move.
+   * @param ant current ant
+   * @return bits that are open
+   */
   private int getDirectionBitsOpen(AntData ant)
   {
     if (DEBUG) System.out.println("  getDirectionBitsOpen()");
@@ -386,12 +438,21 @@ public class ClientRandomWalk
       
       if (neighborCell == null) dirBits = dirBits & bit;
       else if (neighborCell.getType() == 'W') dirBits -= bit;
-      else if (neighborCell.getType() != 'G' && ant.gridX > centerX + 10 && ant.gridX < centerX - 10 && ant.gridY > centerY + 10 && ant.gridY < centerY - 10)  dirBits -= bit;
+      else if (neighborCell.getType() != 'G' && ant.gridX > centerX + 10 && ant.gridX < centerX - 10 &&
+              ant.gridY > centerY + 10 && ant.gridY < centerY - 10)  dirBits -= bit;
     }
-    
     return dirBits;
   }
-
+  
+  /**
+   * Get the direction bits to a certain location
+   * @param dirBits  direction bits that are open
+   * @param x position 1
+   * @param y position 1
+   * @param xx position 2
+   * @param yy position 2
+   * @return bits to location
+   */
   private static int getDirBitsToLocation(int dirBits, int x, int y, int xx, int yy)
   {
     double angle = atan2(yy - y,xx - x);
@@ -430,63 +491,86 @@ public class ClientRandomWalk
     {
       dirBits = dirBits & (DIR_BIT_W);
     }
-
     return dirBits;
   }
   
+  /**
+   * Go home if the ant needs to heal of drop off food
+   * @param ant current ant
+   * @param action action of ant
+   * @param homeAction what to do, heal or drop off
+   * @param data comm data
+   * @return action for home
+   */
   private boolean goHome(AntData ant, AntAction action, int homeAction, CommData data)
   {
-    if(homeAction == 1 && ant.underground)
+    if (homeAction == 1 && ant.underground)
     {
       action.type = AntActionType.HEAL;
-      System.out.println("Healed");
+      if (DEBUG) System.out.println("Healed");
       return true;
     }
     
-    if(homeAction == 2 && ant.underground)
+    if (homeAction == 2 && ant.underground)
     {
       action.type = AntActionType.DROP;
       action.direction = Direction.NORTH;
       action.quantity = ant.carryUnits;
       
       //Print out nest food supply
-      for(int i = 0; i < data.foodStockPile.length; i++)
+      if (DEBUG)
       {
-        System.out.println(data.foodStockPile[i]);
+        for (int i = 0; i < data.foodStockPile.length; i++)
+        {
+          System.out.println(data.foodStockPile[i]);
+        }
       }
       return true;
     }
 
     int distance = manhattanDistance(ant.gridX, ant.gridY, centerX, centerY);
 
-    if(distance < 21)
+    if (distance < 21)
     {
-      exitQueue.add(new location(ant.gridX, ant.gridY));
+      exitQueue.add(new Location(ant.gridX, ant.gridY));
       action.type = AntActionType.ENTER_NEST;
-      System.out.println("Entered nest");
+      if (DEBUG) System.out.println("Entered nest");
       return true;
     }
-    
     return goToward(ant, centerX, centerY, action);
   }
   
+  /**
+   * Go home if the ant is carrying food or needs to heal
+   * @param ant current ant
+   * @param action action of ant
+   * @param data comm data
+   * @return a call to the goHome function with the proper action (heal or drop)
+   */
   private boolean goHomeIfCarryingOrHurt(AntData ant, AntAction action, CommData data)
   {
-    if(ant.health <= ant.antType.getMaxHealth()/1.8)
+    if (ant.health <= ant.antType.getMaxHealth()/1.8)
     {
       return goHome(ant, action, 1, data);
     }
-    else if(ant.carryUnits > 10 && ant.carryType != FoodType.WATER)
+    else if (ant.carryUnits > 10 && ant.carryType != FoodType.WATER)
     {
       return goHome(ant, action, 2, data);
     }
-    else if(ant.carryUnits >= ant.antType.getCarryCapacity() && ant.carryType == FoodType.WATER)
+    else if (ant.carryUnits >= ant.antType.getCarryCapacity() && ant.carryType == FoodType.WATER)
     {
       return goHome(ant, action, 2, data);
     }
     return false;
   }
   
+  /**
+   * Pick up any food that is adjacent to the ant
+   * @param ant current ant
+   * @param action action of ant
+   * @param food food to be picked up
+   * @return action to pick up as much food as possible
+   */
   private boolean pickUpFoodAdjacent(AntData ant, AntAction action, FoodData food)
   {
     if (DEBUG) System.out.println("  pickUpFoodAdjactent()");
@@ -501,19 +585,19 @@ public class ClientRandomWalk
       
       if (neighborCell.getType() == 'W') continue;
       
-      if(neighborCell.getX() == food.gridX && neighborCell.getY() == food.gridY)
+      if (neighborCell.getX() == food.gridX && neighborCell.getY() == food.gridY)
       {
         action.type = AntActionType.PICKUP;
         action.direction = dir;
-        if(food.getCount() < ant.antType.getCarryCapacity())
+        if (food.getCount() < ant.antType.getCarryCapacity())
         {
-          System.out.println("Picked up leftovers");
+          if (DEBUG) System.out.println("Picked up leftovers");
           action.quantity = food.getCount();
           return true;
         }
         else
         {
-          System.out.println("Picked up everything");
+          if (DEBUG) System.out.println("Picked up everything");
           action.quantity = ant.antType.getCarryCapacity();
           return true;
         }
@@ -522,19 +606,26 @@ public class ClientRandomWalk
     return false;
   }
   
+  /**
+   * Go to a food source if it is visible to any ant
+   * @param ant current ant
+   * @param action action of ant
+   * @param data comm data
+   * @return go toward the food source or pick up the food if close enougb
+   */
   private boolean goToFood(AntData ant, AntAction action, CommData data)
   {
-    if(!data.foodSet.isEmpty())
+    if (!data.foodSet.isEmpty())
     {
       for (FoodData food : data.foodSet)
       {
         int distance = manhattanDistance(ant.gridX, ant.gridY, food.gridX, food.gridY);
-        if(distance < 2)
+        if (distance < 2)
         {
           return pickUpFoodAdjacent(ant, action, food);
         }
         
-        if(distance < 40)
+        if (distance < 60)
         {
           return goToward(ant, food.gridX, food.gridY, action);
         }
@@ -543,18 +634,26 @@ public class ClientRandomWalk
     return false;
   }
   
+  /**
+   * Pick up water if the ant is close enough, the nest water stock is less that 5000,
+   * and the ant is in the list of dedicated water collecting ants
+   * @param ant current ant
+   * @param action action of ant
+   * @param data comm data
+   * @return pick up the water
+   */
   private boolean pickUpWater(AntData ant, AntAction action, CommData data)
   {
     if (DEBUG) System.out.println("  pickUpWater()");
 
-    if(data.foodStockPile[0] > 5000) return false;
+    if (data.foodStockPile[0] > 5000) return false;
 
     int distance = manhattanDistance(ant.gridX, ant.gridY, waterX, waterY);
     
     if (distance < 45 && waterAnts.size() < 10)
     {
       waterAnts.add(ant);
-      System.out.println("Adding ant to list for water");
+      if (DEBUG) System.out.println("Adding ant to list for water");
     }
     
     if (!waterAnts.contains(ant) && !waterAnts.isEmpty()) return false;
@@ -574,7 +673,7 @@ public class ClientRandomWalk
       
       if (neighborCell.getType() == 'W')
       {
-        if(waterX == -1 || waterY == -1)
+        if (waterX == -1 || waterY == -1)
         {
           waterX = neighborCell.getX();
           waterY = neighborCell.getY();
@@ -588,10 +687,17 @@ public class ClientRandomWalk
     return false;
   }
   
+  /**
+   * Attack the adjacent enemy ant
+   * @param ant current ant
+   * @param action action of ant
+   * @param enemyAnt ant to attack
+   * @return attack
+   */
   private boolean attackAdjacent(AntData ant, AntAction action, AntData enemyAnt)
   {
     if (DEBUG) System.out.println("  attackAdjacent()");
-    System.out.println("Calling attack");
+    if (DEBUG) System.out.println("Calling attack");
     for (Direction dir : Direction.values())
     {
       int x = ant.gridX + dir.deltaX();
@@ -608,20 +714,60 @@ public class ClientRandomWalk
       {
         action.type = AntActionType.ATTACK;
         action.direction = dir;
-        System.out.println("Attacking ant");
+        if (DEBUG) System.out.println("Attacking ant");
         return true;
       }
     }
     return false;
   }
-
+  
+  /**
+   * Go to an enemy ant and attack it if it is carrying food other than water,
+   * has attacked my ant, or if my ants outnumber it
+   * @param ant current ant
+   * @param action action of ant
+   * @param data comm data
+   * @return goToward enemy ant and attack it if in range
+   */
   private boolean goToEnemyAnt(AntData ant, AntAction action, CommData data)
   {
-    if(!data.enemyAntSet.isEmpty())
+    if (!data.enemyAntSet.isEmpty())
     {
-      for(AntData enemyAnt : data.enemyAntSet)
+      for (AntData enemyAnt : data.enemyAntSet)
       {
-        if((enemyAnt.carryUnits > 0 && enemyAnt.carryType != FoodType.WATER) || enemyAnt.myAction.type == AntActionType.ATTACK)
+        int friendlyCounter = 0;
+        int enemyCounter = 0;
+        boolean outnumber = false;
+        
+        for (AntData friendlyAntNearby : data.myAntList)
+        {
+          if (manhattanDistance(friendlyAntNearby.gridX, friendlyAntNearby.gridY, enemyAnt.gridX, enemyAnt.gridY) < 35)
+          {
+            friendlyCounter++;
+          }
+        }
+  
+        for (AntData enemyAntNearby : data.enemyAntSet)
+        {
+          if (manhattanDistance(enemyAntNearby.gridX, enemyAntNearby.gridY, enemyAnt.gridX, enemyAnt.gridY) < 35)
+          {
+            enemyCounter++;
+          }
+        }
+        
+        if (friendlyCounter > enemyCounter)
+        {
+          outnumber = true;
+          if (DEBUG) System.out.println("Outnumber");
+        }
+        
+        if (friendlyCounter + 5 < enemyCounter)
+        {
+          return goToward(ant, centerX, centerY, action);
+        }
+        
+        if ((enemyAnt.carryUnits > 0 && enemyAnt.carryType != FoodType.WATER) ||
+                enemyAnt.myAction.type == AntActionType.ATTACK || outnumber)
         {
           int distance = manhattanDistance(ant.gridX, ant.gridY, enemyAnt.gridX, enemyAnt.gridY);
   
@@ -639,14 +785,13 @@ public class ClientRandomWalk
                 if (history.getEnemyAnt() != null)
                 {
                   history.setEnemyAnt(enemyAnt);
-          
-                  System.out.println(ant.id + " going to enemy ant " + history.getEnemyAnt().id);
+                  if (DEBUG) System.out.println(ant.id + " going to enemy ant " + history.getEnemyAnt().id);
                   return goToward(ant, history.getEnemyAnt().gridX, history.getEnemyAnt().gridY, action);
                 }
         
                 if (distance < 40 && history.getEnemyAnt() == null)
                 {
-                  System.out.println(ant.id + " setting new enemy ant " + enemyAnt.id);
+                  if (DEBUG) System.out.println(ant.id + " setting new enemy ant " + enemyAnt.id);
                   history.setEnemyAnt(enemyAnt);
                 }
               }
@@ -658,26 +803,32 @@ public class ClientRandomWalk
     return false;
   }
   
+  /**
+   * If an ant encounters water get the next open location to the right of the ant ant go there
+   * @param ant current ant
+   * @param action action of ant
+   * @return go to next open location
+   */
   private boolean unStickOnWater(AntData ant, AntAction action)
   {
-    if(!waterAnts.contains(ant))
+    if (!waterAnts.contains(ant))
     {
-      for(int x = ant.gridX - 1; x < ant.gridX + 2; x++)
+      for (int x = ant.gridX - 1; x < ant.gridX + 2; x++)
       {
-        for(int y = ant.gridY - 1; y < ant.gridY + 2; y++)
+        for (int y = ant.gridY - 1; y < ant.gridY + 2; y++)
         {
-          if(map[x][y].getType() == 'W')
+          if (map[x][y].getType() == 'W')
           {
             int dirBits = getDirectionBitsOpen(ant);
             String bits = toBinaryString(dirBits);
             int direction = -1;
             int length = bits.length();
             
-            if(length < 8 || bits.charAt(length - 1) == '0')
+            if (length < 8 || bits.charAt(length - 1) == '0')
             {
-              for(int i = length - 1; i > -1; i--)
+              for (int i = length - 1; i > -1; i--)
               {
-                if(bits.charAt(i) == '1')
+                if (bits.charAt(i) == '1')
                 {
                   direction = i + (8 - length);
                   break;
@@ -685,7 +836,7 @@ public class ClientRandomWalk
               }
             }
             
-            if(direction == -1)
+            if (direction == -1)
             {
               for (int i = 0; i < 8; i++)
               {
@@ -697,14 +848,14 @@ public class ClientRandomWalk
               }
             }
             
-            if(direction == 0) action.direction = Direction.NORTHWEST;
-            if(direction == 1) action.direction = Direction.WEST;
-            if(direction == 2) action.direction = Direction.SOUTHWEST;
-            if(direction == 3) action.direction = Direction.SOUTH;
-            if(direction == 4) action.direction = Direction.SOUTHEAST;
-            if(direction == 5) action.direction = Direction.EAST;
-            if(direction == 6) action.direction = Direction.NORTHEAST;
-            if(direction == 7) action.direction = Direction.NORTH;
+            if (direction == 0) action.direction = Direction.NORTHWEST;
+            if (direction == 1) action.direction = Direction.WEST;
+            if (direction == 2) action.direction = Direction.SOUTHWEST;
+            if (direction == 3) action.direction = Direction.SOUTH;
+            if (direction == 4) action.direction = Direction.SOUTHEAST;
+            if (direction == 5) action.direction = Direction.EAST;
+            if (direction == 6) action.direction = Direction.NORTHEAST;
+            if (direction == 7) action.direction = Direction.NORTH;
             
             action.type = AntActionType.MOVE;
             return true;
@@ -715,21 +866,30 @@ public class ClientRandomWalk
     return false;
   }
   
+  /**
+   * Explore the map in pulses. Go out to a certain distance, rotate to the right, and then come back to base.
+   * With every pulse, the exploration distance gets larger. This method guarantees that if food spawns close to
+   * the base and the ants have passed it on their way out, they will find it on the way back.
+   * @param ant current ant
+   * @param action action of ant
+   * @param data comm data
+   * @return pulse-like movement for the ant
+   */
   private boolean goExplore(AntData ant, AntAction action, CommData data)
   {
     int distance = manhattanDistance(centerX, centerY, ant.gridX, ant.gridY);
     boolean notReturning = true;
 
-    if(historyForExploring.contains(ant.id)) notReturning = false;
+    if (historyForExploring.contains(ant.id)) notReturning = false;
     
     double angle = atan2(ant.gridY - centerY,ant.gridX - centerX);
 
     int goalX = intValue(100000 * cos(angle)) + random.nextInt(400) - 200;
     int goalY = intValue(100000 * sin(angle)) + random.nextInt(400) - 200;
 
-    //System.out.println("antID: " + ant.id + " angle" + angle);
+    if (DEBUG) System.out.println("antID: " + ant.id + " angle" + angle);
 
-    if(ant.antType != AntType.SPEED)
+    if (ant.antType != AntType.SPEED)
     {
       if (setPreviousTick && notReturning && distance >= explorationDistance)
       {
@@ -741,7 +901,7 @@ public class ClientRandomWalk
       }
       else if (isTwisting)
       {
-        //System.out.println("previousTick" + previousTick);
+        if (DEBUG) System.out.println("previousTick" + previousTick);
         if (data.gameTick <= previousTick + explorationTwistTick)
         {
           if (!historyForExploring.contains(ant.id))
@@ -758,9 +918,7 @@ public class ClientRandomWalk
         }
         else
         {
-
           int i;
-
           for (i = 0; i < historyForExploring.size() - 1; i++)
           {
             if (historyForExploring.get(i) == ant.id)
@@ -787,14 +945,19 @@ public class ClientRandomWalk
       }
     }
 
-    if(notReturning && unStickOnWater(ant, action))
+    if (notReturning && unStickOnWater(ant, action))
     {
       return true;
     }
-
     return goToward(ant, goalX, goalY, action);
   }
   
+  /**
+   * Go in a random direction that is open
+   * @param ant current ant
+   * @param action action of ant
+   * @return random movement of the ant
+   */
   private boolean goRandom(AntData ant, AntAction action)
   {
     int dirBits = getDirectionBitsOpen(ant);
@@ -805,6 +968,12 @@ public class ClientRandomWalk
     return true;
   }
   
+  /**
+   * Go through all of the possibilities for the ant actions and choose one for the current ant
+   * @param data comm data
+   * @param ant current ant
+   * @return the action for that ant
+   */
   private AntAction chooseAction(CommData data, AntData ant)
   {
     AntAction action = new AntAction(AntActionType.STASIS);
@@ -815,7 +984,6 @@ public class ClientRandomWalk
     if (goToFood(ant, action, data)) return action;
     if (pickUpWater(ant, action, data)) return action;
     if (goToEnemyAnt(ant, action, data)) return action;
-    //if (unStickOnWater(ant, action)) return action;
     if (goExplore(ant, action, data)) return action;
     if (goRandom(ant, action)) return action;
     return action;
@@ -827,6 +995,6 @@ public class ClientRandomWalk
     if (args.length > 0) serverHost = args[0];
     System.out.println("Starting client with connection to: " + serverHost);
 
-    new ClientRandomWalk(serverHost, Constants.PORT);
+    new JoshAntonAntAI(serverHost, Constants.PORT);
   }
 }

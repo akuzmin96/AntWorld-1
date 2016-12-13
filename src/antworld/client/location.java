@@ -1,21 +1,30 @@
 package antworld.client;
 
 /**
- * Created by joshu on 12/11/2016.
+ * This class is used to store the location of the ant when it enters and exits the nest
+ *
+ * @author Joshua Donckels
  */
-public class location
+public class Location
 {
-  int x;
-  int y;
+  private int x;
+  private int y;
 
-  public location(int x, int y)
+  public Location(int x, int y)
   {
     this.x = x;
     this.y = y;
   }
-
+  
+  /**
+   * Get the X position of the ant
+   * @return x position
+   */
   public int getX() {return x;}
-
+  
+  /**
+   * Get the Y position of the ant
+   * @return y position
+   */
   public int getY() {return y;}
-
 }

@@ -1,7 +1,9 @@
 package antworld.client;
 
 /**
- * Created by Anton on 11/20/2016.
+ * This class represents the different pixels on the map as characters
+ *
+ * @author Anton Kuzmin
  */
 public class Pixel
 {
@@ -16,21 +18,40 @@ public class Pixel
     this.height = height;
   }
   
+  /**
+   * Get the X position of the pixel
+   * @return x position
+   */
   public int getX()
   {
     return x;
   }
   
+  /**
+   * Get the Y position of the pixel
+   * @return y position
+   */
   public int getY()
   {
     return y;
   }
   
+  /**
+   * Get the character type of the pixel:
+   * W = water
+   * G = grass
+   * N = nest
+   * @return type of the pixel
+   */
   public char getType()
   {
     return type;
   }
   
+  /**
+   * Get the height of grass the pixel
+   * @return height of the pixel
+   */
   public int getHeight()
   {
     return height;

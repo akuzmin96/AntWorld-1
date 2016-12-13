@@ -5,7 +5,9 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 
 /**
- * Created by Anton on 12/1/2016.
+ * This class reads in the map and creates a 2-D array representation of it.
+ *
+ * @author Anton
  */
 public class World
 {
@@ -28,6 +30,10 @@ public class World
     readMap(map);
   }
   
+  /**
+   * Read the map using a buffered image and assign the types for each pixel
+   * @param map .png file to read
+   */
   private void readMap(BufferedImage map)
   {
     world = new Pixel[width][height];
@@ -62,12 +68,21 @@ public class World
     }
   }
   
+  /**
+   * Get the height of the pixel
+   * @param rgb color index
+   * @return height
+   */
   private static int getMapHeight(int rgb)
   {
     int g = (rgb & 0x0000FF00) >> 8;
     return Math.max(0, g - 48);
   }
   
+  /**
+   * Get the 2-d array of the map
+   * @return map
+   */
   public Pixel[][] getWorld()
   {
     return world;
