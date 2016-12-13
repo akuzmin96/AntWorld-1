@@ -1009,7 +1009,7 @@ public class JoshAntonAntAI
             }
           }
 
-          if (historyForExploring.size() < antsExploring / 2)
+          if (historyForExploring.size() < antsExploring / 1.5)
           {
             isTwisting = false;
             setPreviousTick = true;
