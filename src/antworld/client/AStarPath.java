@@ -47,7 +47,7 @@ public class AStarPath {
       {
         for(int j = current.getY() - 1; i < current.getY() + 1; i++)
         {
-          if(i != j && i > 0 && j > 0)
+          if(i != j )
           {
             Pixel next = map[i][j];
             if(next.getType() != 'W')
