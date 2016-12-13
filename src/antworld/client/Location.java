@@ -15,13 +15,13 @@ public class Location
     this.x = x;
     this.y = y;
   }
-  
+
   /**
    * Get the X position of the ant
    * @return x position
    */
   public int getX() {return x;}
-  
+
   /**
    * Get the Y position of the ant
    * @return y position
